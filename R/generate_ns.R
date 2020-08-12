@@ -1,4 +1,4 @@
-#' @useDynLib conquer
+#' @useDynLib scqr
 #' @importFrom Rcpp evalCpp
 #' @importFrom matrixStats rowSds rowQuantiles colSds
 #' @importFrom stats qnorm
