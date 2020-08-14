@@ -203,7 +203,7 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
                      const double tol = 0.0001, const int iteMax = 5000) {
   const int n = X.n_rows;
   const int p = X.n_cols;
-  const int m = tauSeq.size();
+  const int m = tauSeq.size() - 1;
   if (h <= 0.05) {
     h = std::max(std::pow((std::log(n) + p) / n, 0.4), 0.05);
   }
