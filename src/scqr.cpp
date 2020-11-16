@@ -130,7 +130,7 @@ void updateTrian(const arma::mat& Z, const arma::vec& res, arma::vec& der, arma:
 // [[Rcpp::export]]
 arma::vec step0Gauss(const arma::mat& Z, const arma::vec& Y, const arma::uvec& censor, arma::vec& accu, const double tau, const double h, 
                      const int n, const int p, const double n1, const double h1, const double constTau = 1.345, const double tol = 0.0001, 
-                     const int iteMax = 5000) {
+                     const int iteMax = 500) {
   arma::vec gradOld(p + 1), gradNew(p + 1);
   arma::vec der(n);
   arma::vec beta = huberReg(Z, Y, der, gradOld, gradNew, n, p, n1, tol, constTau, iteMax);
