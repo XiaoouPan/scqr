@@ -1,7 +1,7 @@
 ###### Simulation code for scqr
 
 rm(list = ls())
-Rcpp::sourceCpp("~/Documents/Software/scqr/src/scqr.cpp")
+Rcpp::sourceCpp("src/scqr.cpp")
 
 library(quantreg)
 library(MASS)
@@ -14,7 +14,7 @@ nseq = seq(1000, 20000, by = 1000)
 #pseq = floor(sqrt(nseq))
 pseq = floor(nseq / 40)
 l = length(nseq)
-M = 5
+M = 1
 coef = time = matrix(0, 2, l)
 prop = rep(0, l)
 tau = 0.7
