@@ -60,8 +60,8 @@ coef = coef / M
 #write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/prop.csv")
 #write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv")
 #write.csv(coef, "~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv")
-time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
-coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
+#time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
+#coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
 
 setwd("~/Dropbox/Conquer/censoredQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 6, height = 6)
