@@ -171,7 +171,7 @@ arma::vec stepkGauss(const arma::mat& Z, const arma::vec& Y, const arma::uvec& c
   arma::vec gradOld(p + 1), gradNew(p + 1);
   arma::vec der(n);
   arma::vec res = Z * beta - Y;
-  accu += (Y >= Z * beta) % ((getH(tauSeq(k)) - getH(tauSeq(k - 1))) * arma::ones(n));
+  accu += arma::normcdf(-res * h1) * (getH(tauSeq(k)) - getH(tauSeq(k - 1)));
   updateGauss(Z, censor, res, accu, der, gradOld, n1, h1);
   beta -= gradOld;
   arma::vec betaDiff = -gradOld;
@@ -205,7 +205,7 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
   const int p = X.n_cols;
   const int m = tauSeq.size() - 1;
   if (h <= 0.05) {
-    h = std::max(std::pow((std::log(n) + p) / n, 0.4), 0.05);
+    h = std::max(std::sqrt((std::log(n) + p) / n), 0.05);
   }
   const double n1 = 1.0 / n;
   const double h1 = 1.0 / h;
