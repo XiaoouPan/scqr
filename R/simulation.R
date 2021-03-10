@@ -10,7 +10,7 @@ library(matrixStats)
 library(survival)
 library(tikzDevice)
 
-nseq = seq(2000, 20000, by = 2000)
+nseq = seq(2000, 6000, by = 2000)
 pseq = floor(nseq / 40)
 l = length(nseq)
 M = 1
