@@ -11,7 +11,6 @@ library(survival)
 library(tikzDevice)
 
 nseq = seq(1000, 20000, by = 1000)
-#pseq = floor(sqrt(nseq))
 pseq = floor(nseq / 40)
 l = length(nseq)
 M = 1
