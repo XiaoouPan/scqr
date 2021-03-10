@@ -16,35 +16,39 @@ n = 5000
 p = n / 40
 M = 1
 tauSeq = seq(0.1, 0.9, by = 0.05)
-grid = seq(0.1, 0.9, by = 0.1)
+grid = seq(0.1, 0.95, by = 0.05)
 nTau = length(tauSeq)
-beta0 = 1
-coef = itcp = time = matrix(0, 2, nTau)
+beta0 = qt(tauSeq, 2)
+coef1 = itcp1 = matrix(0, M, nTau)
+coef2 = itcp2 = matrix(0, M, nTau)
+time = matrix(0, 2, M)
 prop = rep(0, M)
 
 for (i in 1:M) {
-  set.seed((j - 1) * M + i)
+  set.seed(i)
   X = matrix(rnorm(n * p), n, p)
   beta = runif(p, 1, 2)
-  err = rt(n, 2) - qt(tau, 2)
-  logT = beta0 + X %*% beta + err
+  err = rt(n, 2)
+  logT = X %*% beta + err
   logC = rnorm(n, 5, 4)
   censor = logT <= logC
-  prop[j] = prop[j] + 1 - sum(censor) / n
+  prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
   start = Sys.time()
   list = scqrGauss(X, Y, censor, tauSeq)
   end = Sys.time()
-  time[1, j] = time[1, j] + as.numeric(difftime(end, start, units = "secs"))
-  coef[1, j] = coef[1, j] + mean((list$coeff[-1] - beta)^2)
+  time[1, i] = as.numeric(difftime(end, start, units = "secs"))
+  coef1[i, ] = colMeans((list$coeff[-1, ] - beta)^2)
+  itcp1[i, ] = colMeans(rbind((list$coeff[1, ] - beta0)^2, (list$coeff[-1, ] - beta)^2))
   
   start = Sys.time()
   list = crq(response ~ X, method = "PengHuang", grid = grid)
   end = Sys.time()
-  time[2, j] = time[2, j] + as.numeric(difftime(end, start, units = "secs"))
-  coef[2, j] = coef[2, j] + mean((as.numeric(list$sol[3:(p + 2), length(tauSeq)]) - beta)^2)
+  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
+  coef2[i, ] = colMeans((list$sol[3:(p + 2), ] - beta)^2)
+  itcp2[i, ] = colMeans(rbind((list$sol[2, ] - beta0)^2, (list$sol[3:(p + 2), ] - beta)^2))
   
   setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
 }
