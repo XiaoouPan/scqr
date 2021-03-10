@@ -203,7 +203,7 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
                      const double tol = 0.0001, const int iteMax = 5000) {
   const int n = X.n_rows;
   const int p = X.n_cols;
-  const int m = tauSeq.size() - 1;
+  const int m = tauSeq.size();
   if (h <= 0.05) {
     h = std::max(std::sqrt((std::log(n) + p) / n), 0.05);
   }
@@ -215,13 +215,15 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
   double my = arma::mean(Y);
   Y -= my;
   arma::vec accu(n);
+  arma::mat betaProc(p + 1, m);
   arma::vec beta = step0Gauss(Z, Y, censor, accu, tauSeq(0), h, n, p, n1, h1, constTau, tol, iteMax);
+  betaProc.col(0) = beta;
   arma::vec HSeq = getH(tauSeq);
-  for (int k = 1; k <= m; k++) {
+  for (int k = 1; k < m; k++) {
     beta = stepkGauss(Z, Y, censor, beta, accu, HSeq, k, h, n, p, n1, h1, tol, iteMax);
+    betaProc.col(k) =  beta;
   }
-  beta.rows(1, p) /= sx;
-  beta(0) += my - arma::as_scalar(mx * beta.rows(1, p));
-  return Rcpp::List::create(Rcpp::Named("coeff") = beta, Rcpp::Named("bandwidth") = h);
+  betaProc.rows(1, p).each_col() /= sx;
+  betaProc.row(0) += my - mx * betaProc.rows(1, p);
+  return Rcpp::List::create(Rcpp::Named("coeff") = betaProc, Rcpp::Named("bandwidth") = h);
 }
- 

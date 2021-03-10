@@ -10,6 +10,49 @@ library(matrixStats)
 library(survival)
 library(tikzDevice)
 
+
+#### Quantile process with fixed scale
+n = 5000
+p = n / 40
+M = 1
+tauSeq = seq(0.1, 0.9, by = 0.05)
+grid = seq(0.1, 0.9, by = 0.1)
+nTau = length(tauSeq)
+beta0 = 1
+coef = itcp = time = matrix(0, 2, nTau)
+prop = rep(0, M)
+
+for (i in 1:M) {
+  set.seed((j - 1) * M + i)
+  X = matrix(rnorm(n * p), n, p)
+  beta = runif(p, 1, 2)
+  err = rt(n, 2) - qt(tau, 2)
+  logT = beta0 + X %*% beta + err
+  logC = rnorm(n, 5, 4)
+  censor = logT <= logC
+  prop[j] = prop[j] + 1 - sum(censor) / n
+  Y = pmin(logT, logC)
+  response = Surv(Y, censor, type = "right")
+  
+  start = Sys.time()
+  list = scqrGauss(X, Y, censor, tauSeq)
+  end = Sys.time()
+  time[1, j] = time[1, j] + as.numeric(difftime(end, start, units = "secs"))
+  coef[1, j] = coef[1, j] + mean((list$coeff[-1] - beta)^2)
+  
+  start = Sys.time()
+  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  end = Sys.time()
+  time[2, j] = time[2, j] + as.numeric(difftime(end, start, units = "secs"))
+  coef[2, j] = coef[2, j] + mean((as.numeric(list$sol[3:(p + 2), length(tauSeq)]) - beta)^2)
+  
+  setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
+}
+
+
+
+
+#### Growing dimension
 nseq = seq(2000, 6000, by = 2000)
 pseq = floor(nseq / 40)
 l = length(nseq)
@@ -25,7 +68,7 @@ pb = txtProgressBar(style = 3)
 for (j in 1:l) {
   n = nseq[j]
   p = pseq[j]
-  beta = runif(p, -2, 2)
+  beta = runif(p, 1, 2)
   for (i in 1:M) {
     set.seed((j - 1) * M + i)
     X = matrix(rnorm(n * p), n, p)
