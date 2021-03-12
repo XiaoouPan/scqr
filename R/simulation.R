@@ -147,36 +147,41 @@ tauSeq = seq(0.05, 0.95, by = 0.05)
 grid = seq(0.05, 0.95, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
+M = 1
 coef1 = coef2 = time1 = time2 = prop = matrix(0, M, l)
 
-
+## Homo 
 pb = txtProgressBar(style = 3)
 for (j in 1:l) {
   n = nseq[j]
   p = pseq[j]
-  beta = runif(p, 1, 2)
   for (i in 1:M) {
     set.seed((j - 1) * M + i)
-    X = matrix(rnorm(n * p), n, p)
-    err = rt(n, 2) - qt(tau, 2)
-    logT = beta0 + X %*% beta + err
-    logC = rnorm(n, 5, 4)
+    Sigma = getSigma(p)
+    X = mvrnorm(n, rep(0, p), Sigma)
+    err = rt(n, 2)
+    beta = runif(p, -2, 2)
+    betaMat = rbind(beta0, matrix(beta, p, nTau))
+    logT = X %*% beta + err
+    w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
+    logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
     censor = logT <= logC
-    prop[j] = prop[j] + 1 - sum(censor) / n
+    prop[i, j] = 1 - sum(censor) / n
     Y = pmin(logT, logC)
     response = Surv(Y, censor, type = "right")
     
     start = Sys.time()
     list = scqrGauss(X, Y, censor, tauSeq)
     end = Sys.time()
-    time[1, j] = time[1, j] + as.numeric(difftime(end, start, units = "secs"))
-    coef[1, j] = coef[1, j] + mean((list$coeff[-1] - beta)^2)
+    time1[i, j] = as.numeric(difftime(end, start, units = "secs"))
+    coef1[i, j] = estError(list$coeff, betaMat, tauSeq)
     
     start = Sys.time()
     list = crq(response ~ X, method = "PengHuang", grid = grid)
     end = Sys.time()
-    time[2, j] = time[2, j] + as.numeric(difftime(end, start, units = "secs"))
-    coef[2, j] = coef[2, j] + mean((as.numeric(list$sol[3:(p + 2), length(tauSeq)]) - beta)^2)
+    time2[i, j] = as.numeric(difftime(end, start, units = "secs"))
+    tt = ncol(list$sol)
+    coef2[i, j] = estError(list$sol[2:(p + 2), ], betaMat[, 1:tt], tauSeq)
     
     setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
   }
