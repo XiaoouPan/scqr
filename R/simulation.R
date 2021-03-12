@@ -22,7 +22,13 @@ getSigma = function(p) {
 
 estError = function(betahat, beta, tauSeq) {
   nTau = length(tauSeq)
-  
+  diff = betahat - beta
+  err = sqrt(colSums((betahat - beta)^2))
+  accu = 0
+  for (k in 2:nTau) {
+    accu = accu + err[k - 1] * (tauSeq[k] - tauSeq[k - 1])
+  }
+  return (accu)
 }
 
 
@@ -133,18 +139,16 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 
-
 #### Growing dimension and sample size
 nseq = seq(2000, 6000, by = 2000)
-pseq = floor(nseq / 40)
+pseq = floor(nseq / 50)
 l = length(nseq)
-M = 1
-coef = time = matrix(0, 2, l)
-prop = rep(0, l)
-tau = 0.7
-tauSeq = seq(0.1, tau, by = 0.1)
-grid = seq(0.1, tau + 0.1, by = 0.1)
-beta0 = 1
+tauSeq = seq(0.05, 0.95, by = 0.05)
+grid = seq(0.05, 0.95, by = 0.05)
+nTau = length(tauSeq)
+beta0 = qt(tauSeq, 2)
+coef1 = coef2 = time1 = time2 = prop = matrix(0, M, l)
+
 
 pb = txtProgressBar(style = 3)
 for (j in 1:l) {
