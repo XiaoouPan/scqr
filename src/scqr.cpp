@@ -319,7 +319,7 @@ arma::vec scqrGaussIni(const arma::mat& X, arma::vec Y, const arma::uvec& censor
 }
 
 // [[Rcpp::export]]
-arma::mat scqrGaussInf(const arma::mat& X, arma::vec Y, const arma::uvec& censor, const arma::vec& tauSeq, const int B = 1000, double h = 0.0, 
+Rcpp::List scqrGaussInf(const arma::mat& X, arma::vec Y, const arma::uvec& censor, const arma::vec& tauSeq, const int B = 1000, double h = 0.0, 
                        const double constTau = 1.345, const double tol = 0.0001, const int iteMax = 500) {
   const int n = X.n_rows;
   const int p = X.n_cols;
@@ -354,6 +354,6 @@ arma::mat scqrGaussInf(const arma::mat& X, arma::vec Y, const arma::uvec& censor
     arma::uvec mbCensor = censor.rows(idx);
     rst.col(b) = scqrGaussIni(mbX, mbY, mbCensor, betaProc, tauSeq, HSeq, h, p, m, h1, tol, iteMax);
   }
-  return rst;
+  return Rcpp::List::create(Rcpp::Named("coeff") = betaProc, Rcpp::Named("boot") = rst, Rcpp::Named("bandwidth") = h);
 }
 

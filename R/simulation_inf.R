@@ -31,16 +31,31 @@ estError = function(betahat, beta, tauSeq) {
   return (accu)
 }
 
+getPivCI = function(est, estBoot, alpha) {
+  q1 = rowQuantiles(estBoot, probs = alpha / 2)
+  q2 = rowQuantiles(estBoot, probs = 1 - alpha / 2)
+  perCI = cbind(q1, q2)
+  pivCI = cbind(2 * est - q2, 2 * est - q1)
+  colnames(perCI) = colnames(pivCI) = c("lower", "upper")
+  return (list(perCI = perCI, pivCI = pivCI))
+}
+
+getNormCI = function(est, sd, z) {
+  lower = est - z * sd
+  upper = est + z * sd
+  return (cbind(lower, upper))
+}
+
 #### Fixed scale,
 n = 2000
 p = n / 50
-M = 100
-tauSeq = seq(0.05, 0.95, by = 0.05)
-grid = seq(0.05, 0.95, by = 0.05)
+M = 1
+tauSeq = seq(0.1, 0.7, by = 0.05)
+grid = seq(0.1, 0.7, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-coef1 = eff1 = matrix(0, M, nTau)
-coef2 = eff2 = matrix(0, M, nTau)
+alpha = 0.05
+cover1 = cover2 = matrix(0, M, p + 1)
 time = matrix(0, 2, M)
 prop = rep(0, M)
 
@@ -48,10 +63,10 @@ pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
   #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
-  #Sigma = getSigma(p)
-  #X = mvrnorm(n, rep(0, p), Sigma)
-  Sigma = getSigma(45)
-  X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
+  Sigma = getSigma(p)
+  X = mvrnorm(n, rep(0, p), Sigma)
+  #Sigma = getSigma(45)
+  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
   beta = runif(p, -2, 2)
@@ -70,12 +85,10 @@ for (i in 1:M) {
   response = Surv(Y, censor, type = "right")
   
   start = Sys.time()
-  list = scqrGauss(X, Y, censor, tauSeq)
+  beta.boot = scqrGaussInf(X, Y, censor, tauSeq, B = 1000)
   end = Sys.time()
   time[1, i] = as.numeric(difftime(end, start, units = "secs"))
   coef1[i, ] = sqrt(colSums((list$coeff - betaMat)^2))
-  eff1[i, ] = list$coeff[1, ]
-  #eff1[i, ] = list$coeff[2, ]
   
   start = Sys.time()
   list = crq(response ~ X, method = "PengHuang", grid = grid)
