@@ -31,9 +31,8 @@ estError = function(betahat, beta, tauSeq) {
   return (accu)
 }
 
-
-#### Quantile process with fixed scale, hard to visualize
-n = 5000
+#### Fixed scale,
+n = 2000
 p = n / 50
 M = 100
 tauSeq = seq(0.05, 0.95, by = 0.05)

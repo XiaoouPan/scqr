@@ -71,7 +71,7 @@ arma::mat standardize(arma::mat X, const arma::rowvec& mx, const arma::vec& sx, 
 }
 
 // [[Rcpp::export]]
-void updateGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& res, arma::vec& accu, arma::vec& der, arma::vec& grad, 
+void updateGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& res, const arma::vec& accu, arma::vec& der, arma::vec& grad, 
                  const double n1, const double h1) {
   der = censor % arma::normcdf(res * h1) - accu;
   grad = n1 * Z.t() * der;
@@ -165,9 +165,43 @@ arma::vec step0Gauss(const arma::mat& Z, const arma::vec& Y, const arma::uvec& c
 }
 
 // [[Rcpp::export]]
+arma::vec step0GaussIni(const arma::mat& Z, const arma::vec& Y, const arma::uvec& censor, const arma::mat& betaMat, arma::vec& accu, const double tau, 
+                        const double h, const int n, const int p, const double n1, const double h1, const double tol = 0.0001, const int iteMax = 500) {
+  arma::vec gradOld(p + 1), gradNew(p + 1);
+  arma::vec der(n);
+  arma::vec beta = betaMat.col(0);
+  arma::vec res = Z * beta - Y;
+  accu = tau * arma::ones(n);
+  updateGauss(Z, censor, res, accu, der, gradOld, n1, h1);
+  beta -= gradOld;
+  arma::vec betaDiff = -gradOld;
+  res += Z * betaDiff;
+  updateGauss(Z, censor, res, accu, der, gradNew, n1, h1);
+  arma::vec gradDiff = gradNew - gradOld;
+  int ite = 1;
+  while (arma::norm(gradNew, "inf") > tol && ite <= iteMax) {
+    double alpha = 1.0;
+    double cross = arma::as_scalar(betaDiff.t() * gradDiff);
+    if (cross > 0) {
+      double a1 = cross / arma::as_scalar(gradDiff.t() * gradDiff);
+      double a2 = arma::as_scalar(betaDiff.t() * betaDiff) / cross;
+      alpha = std::min(std::min(a1, a2), 100.0);
+    }
+    gradOld = gradNew;
+    betaDiff = -alpha * gradNew;
+    beta += betaDiff;
+    res += Z * betaDiff;
+    updateGauss(Z, censor, res, accu, der, gradNew, n1, h1);
+    gradDiff = gradNew - gradOld;
+    ite++;
+  }
+  return beta;
+}
+
+// [[Rcpp::export]]
 arma::vec stepkGauss(const arma::mat& Z, const arma::vec& Y, const arma::uvec& censor, arma::vec& beta, arma::vec& accu, const arma::vec& HSeq, 
                      const int k, const double h, const int n, const int p, const double n1, const double h1, const double tol = 0.0001, 
-                     const int iteMax = 5000) {
+                     const int iteMax = 500) {
   arma::vec gradOld(p + 1), gradNew(p + 1);
   arma::vec der(n);
   arma::vec res = Z * beta - Y;
@@ -199,8 +233,44 @@ arma::vec stepkGauss(const arma::mat& Z, const arma::vec& Y, const arma::uvec& c
 }
 
 // [[Rcpp::export]]
+arma::vec stepkGaussIni(const arma::mat& Z, const arma::vec& Y, const arma::uvec& censor, const arma::mat& betaMat, arma::vec& beta, arma::vec& accu, 
+                        const arma::vec& HSeq, const int k, const double h, const int n, const int p, const double n1, const double h1, const double tol = 0.0001, 
+                        const int iteMax = 500) {
+  arma::vec gradOld(p + 1), gradNew(p + 1);
+  arma::vec der(n);
+  arma::vec res = Z * beta - Y;
+  accu += arma::normcdf(-res * h1) * (HSeq(k) - HSeq(k - 1));
+  beta = betaMat.col(k);
+  res = Z * beta - Y;
+  updateGauss(Z, censor, res, accu, der, gradOld, n1, h1);
+  beta -= gradOld;
+  arma::vec betaDiff = -gradOld;
+  res += Z * betaDiff;
+  updateGauss(Z, censor, res, accu, der, gradNew, n1, h1);
+  arma::vec gradDiff = gradNew - gradOld;
+  int ite = 1;
+  while (arma::norm(gradNew, "inf") > tol && ite <= iteMax) {
+    double alpha = 1.0;
+    double cross = arma::as_scalar(betaDiff.t() * gradDiff);
+    if (cross > 0) {
+      double a1 = cross / arma::as_scalar(gradDiff.t() * gradDiff);
+      double a2 = arma::as_scalar(betaDiff.t() * betaDiff) / cross;
+      alpha = std::min(std::min(a1, a2), 100.0);
+    }
+    gradOld = gradNew;
+    betaDiff = -alpha * gradNew;
+    beta += betaDiff;
+    res += Z * betaDiff;
+    updateGauss(Z, censor, res, accu, der, gradNew, n1, h1);
+    gradDiff = gradNew - gradOld;
+    ite++;
+  }
+  return beta;
+}
+
+// [[Rcpp::export]]
 Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, const arma::vec& tauSeq, double h = 0.0, const double constTau = 1.345, 
-                     const double tol = 0.0001, const int iteMax = 5000) {
+                     const double tol = 0.0001, const int iteMax = 500) {
   const int n = X.n_rows;
   const int p = X.n_cols;
   const int m = tauSeq.size();
@@ -227,3 +297,63 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
   return Rcpp::List::create(Rcpp::Named("coeff") = betaProc, Rcpp::Named("bandwidth") = h);
 }
+
+// [[Rcpp::export]]
+arma::vec scqrGaussIni(const arma::mat& X, arma::vec Y, const arma::uvec& censor, const arma::mat& betaProc, const arma::vec& tauSeq, 
+                        const arma::vec& HSeq, const double h, const int p, const int m, const double h1, const double tol = 0.0001, const int iteMax = 500) {
+  const int n = X.n_rows;
+  const double n1 = 1.0 / n;
+  arma::rowvec mx = arma::mean(X, 0);
+  arma::vec sx = arma::stddev(X, 0, 0).t();
+  arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx, p));
+  double my = arma::mean(Y);
+  Y -= my;
+  arma::vec accu(n);
+  arma::vec beta = step0GaussIni(Z, Y, censor, betaProc, accu, tauSeq(0), h, n, p, n1, h1, tol, iteMax);
+  for (int k = 1; k < m; k++) {
+    beta = stepkGaussIni(Z, Y, censor, betaProc, beta, accu, HSeq, k, h, n, p, n1, h1, tol, iteMax);
+  }
+  beta.rows(1, p) /= sx;
+  beta(0) += my - arma::as_scalar(mx * beta.rows(1, p));
+  return beta;
+}
+
+// [[Rcpp::export]]
+arma::mat scqrGaussInf(const arma::mat& X, arma::vec Y, const arma::uvec& censor, const arma::vec& tauSeq, const int B = 1000, double h = 0.0, 
+                       const double constTau = 1.345, const double tol = 0.0001, const int iteMax = 500) {
+  const int n = X.n_rows;
+  const int p = X.n_cols;
+  const int m = tauSeq.size();
+  if (h <= 0.05) {
+    h = std::max(std::sqrt((std::log(n) + p) / n), 0.05);
+  }
+  const double n1 = 1.0 / n;
+  const double h1 = 1.0 / h;
+  arma::rowvec mx = arma::mean(X, 0);
+  arma::vec sx = arma::stddev(X, 0, 0).t();
+  arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx, p));
+  double my = arma::mean(Y);
+  Y -= my;
+  arma::vec accu(n);
+  arma::mat betaProc(p + 1, m);
+  arma::vec beta = step0Gauss(Z, Y, censor, accu, tauSeq(0), h, n, p, n1, h1, constTau, tol, iteMax);
+  betaProc.col(0) = beta;
+  arma::vec HSeq = getH(tauSeq);
+  for (int k = 1; k < m; k++) {
+    beta = stepkGauss(Z, Y, censor, beta, accu, HSeq, k, h, n, p, n1, h1, tol, iteMax);
+    betaProc.col(k) =  beta;
+  }
+  betaProc.rows(1, p).each_col() /= sx;
+  betaProc.row(0) += my - mx * betaProc.rows(1, p);
+  Y += my;
+  arma::mat rst(p + 1, B);
+  for (int b = 0; b < B; b++) {
+    arma::uvec idx = arma::find(arma::randi(n, arma::distr_param(0, 1)) == 1);
+    arma::mat mbX = X.rows(idx);
+    arma::vec mbY = Y.rows(idx);
+    arma::uvec mbCensor = censor.rows(idx);
+    rst.col(b) = scqrGaussIni(mbX, mbY, mbCensor, betaProc, tauSeq, HSeq, h, p, m, h1, tol, iteMax);
+  }
+  return rst;
+}
+
