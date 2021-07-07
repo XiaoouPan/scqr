@@ -8,6 +8,7 @@ library(MASS)
 library(MultiRNG)
 library(matrixStats)
 library(survival)
+library(ggplot2)
 library(tikzDevice)
 
 getSigma = function(p) {
@@ -46,18 +47,46 @@ getNormCI = function(est, sd, z) {
   return (cbind(lower, upper))
 }
 
+getCoverage = function(ci, beta) {
+  return (ci[-1, 1] <  beta & ci[-1, 2] > beta)
+}
+
+getWidth = function(ci) {
+  return (ci[-1, 2] - ci[-1, 1])
+}
+
+
+getCoverPlot = function(cover1, cover2, cover3, p) {
+  rst1 = colMeans(cover1)
+  rst2 = colMeans(cover2)
+  rst3 = colMeans(cover3)
+  meth = c(rep("per", p), rep("piv", p), rep("norm", p))
+  meth = factor(meth, levels = c("per", "piv", "norm"))
+  rst = data.frame("cover" = c(rst1, rst2, rst3), "method" = meth)
+  return (rst)
+}
+
+getWidthPlot = function(width1, width2, width3, j, M) {
+  meth = c(rep("per", M), rep("piv", M), rep("norm", M))
+  meth = factor(meth, levels = c("per", "piv", "norm"))
+  rst = data.frame("width" = c(width1[, j], width2[, j], width3[, j]), "method" = meth)
+  return (rst)
+}
+
+
 #### Fixed scale,
 n = 2000
 p = n / 50
-M = 1
-tauSeq = seq(0.1, 0.7, by = 0.05)
-grid = seq(0.1, 0.7, by = 0.05)
+M = 1000
+tauSeq = seq(0.1, 0.5, by = 0.1)
+grid = seq(0.1, 0.5, by = 0.1)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 alpha = 0.05
-cover1 = cover2 = matrix(0, M, p + 1)
-time = matrix(0, 2, M)
-prop = rep(0, M)
+z = qnorm(1 - alpha / 2)
+cover1 = cover2 = cover3 = matrix(0, M, p)
+width1 = width2 = width3 = matrix(0, M, p)
+time = prop = rep(0, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -85,172 +114,58 @@ for (i in 1:M) {
   response = Surv(Y, censor, type = "right")
   
   start = Sys.time()
-  beta.boot = scqrGaussInf(X, Y, censor, tauSeq, B = 1000)
+  list = scqrGaussInf(X, Y, censor, tauSeq, B = 1000)
   end = Sys.time()
-  time[1, i] = as.numeric(difftime(end, start, units = "secs"))
-  coef1[i, ] = sqrt(colSums((list$coeff - betaMat)^2))
-  
-  start = Sys.time()
-  list = crq(response ~ X, method = "PengHuang", grid = grid)
-  end = Sys.time()
-  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
-  tt = ncol(list$sol)
-  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
-  eff2[i, 1:tt] = list$sol[2, ]
-  #eff2[i, 1:tt] = list$sol[3, ]
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  beta.hat = list$coeff
+  beta.boot = list$boot
+  ci.list = getPivCI(beta.hat[, nTau], beta.boot, alpha)
+  ci.per = ci.list$perCI
+  ci.piv = ci.list$pivCI
+  ci.norm = getNormCI(beta.hat[, nTau], rowSds(beta.boot), z)
+  cover1[i, ] = getCoverage(ci.per, beta)
+  cover2[i, ] = getCoverage(ci.piv, beta)
+  cover3[i, ] = getCoverage(ci.norm, beta)
+  width1[i, ] = getWidth(ci.per)
+  width2[i, ] = getWidth(ci.piv)
+  width3[i, ] = getWidth(ci.norm)
   
   setTxtProgressBar(pb, i / M)
 }
 
-rowMeans(time)
-index = which(coef2[, nTau - 1] == 0)
-coef1 = coef1[-index, ]
-coef2 = coef2[-index, ]
-eff1 = eff1[-index, ]
-eff2 = eff2[-index, ]
 
-setwd("~/Dropbox/Conquer/censoredQR/Code")
-est = rbind(colMeans(coef1), colMeans(coef2))
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(tauSeq[-nTau], est[2, -nTau], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 1), 
-     ylim = c(min(pretty(range(est))), max(pretty(range(est)))), xlab = "", ylab = "")
-lines(tauSeq, est[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
-axis(1, tauSeq[c(1, 5, 10, 15, 19)], line = 0, cex.axis = 1.5)
-axis(2, pretty(range(est)), line = 0, cex.axis = 1.5)
-box()
-abline(h = pretty(range(est)), v = tauSeq[c(1, 5, 10, 15, 19)], col = "gray", lty = 2)
-#color = c("red", "blue")
-#labels = c("\\texttt{censored QR}", "\\texttt{proposed method}")
-#pch = c(1, 2)
-#legend(7, 0.014, labels, col = color, pch = pch, lwd = 5, cex = 2, box.lwd = 1, bg = "white")
-title(xlab = "Quantile level $\\tau$", line = 2.5, cex.lab = 1.8)
-title(ylab = "Estimation error in $||\\cdot||_2$", line = 2.5, cex.lab = 1.8)
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
+mean(time)
 
-setwd("~/Dropbox/Conquer/censoredQR/Code")
-est = rbind(colMeans(eff1), colMeans(eff2))
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(tauSeq[-nTau], est[2, -nTau], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 1), 
-     ylim = c(min(pretty(range(est))), max(pretty(range(est)))), xlab = "", ylab = "")
-lines(tauSeq, est[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
-lines(tauSeq, beta0, type = "l", lwd = 5, cex = 1)
-axis(1, tauSeq[c(1, 5, 10, 15, 19)], line = 0, cex.axis = 1.5)
-axis(2, pretty(range(est)), line = 0, cex.axis = 1.5)
-box()
-abline(h = pretty(range(est)), v = tauSeq[c(1, 5, 10, 15, 19)], col = "gray", lty = 2)
-#color = c("red", "blue", "black")
-#labels = c("CQR", "smoothed CQR", "quantile effects")
-#pch = c(1, 2, NA)
-#legend("topleft", labels, col = color, pch = pch, lwd = 3, cex = 1.5, box.lwd = 1, bg = "white")
-title(xlab = "Quantile level $\\tau$", line = 2.5, cex.lab = 1.8)
-title(ylab = "Estimated quantile effects", line = 2.5, cex.lab = 1.8)
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
+write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/prop.csv")
+write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/time.csv")
+write.csv(cover1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover1.csv")
+write.csv(cover2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover2.csv")
+write.csv(cover3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover3.csv")
+write.csv(width1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width1.csv")
+write.csv(width2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width2.csv")
+write.csv(width3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width3.csv")
 
-
-
-
-#### Growing dimension and sample size
-nseq = seq(2000, 20000, by = 2000)
-pseq = floor(nseq / 50)
-l = length(nseq)
-tauSeq = seq(0.05, 0.95, by = 0.05)
-grid = seq(0.05, 0.95, by = 0.05)
-nTau = length(tauSeq)
-beta0 = qt(tauSeq, 2)
-M = 20
-coef1 = coef2 = time1 = time2 = prop = matrix(0, M, l)
-
-pb = txtProgressBar(style = 3)
-for (j in 1:l) {
-  n = nseq[j]
-  p = pseq[j]
-  for (i in 1:M) {
-    set.seed((j - 1) * M + i)
-    Sigma = getSigma(p)
-    X = mvrnorm(n, rep(0, p), Sigma)
-    err = rt(n, 2)
-    ## Homo 
-    #beta = runif(p, -2, 2)
-    #betaMat = rbind(beta0, matrix(beta, p, nTau))
-    #logT = X %*% beta + err
-    ## Hetero
-    X[, 1] = abs(X[, 1])
-    beta = runif(p - 1, -2, 2)
-    betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-    logT = X[, 1] * err + X[, -1] %*% beta
-    w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
-    logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
-    censor = logT <= logC
-    prop[i, j] = 1 - sum(censor) / n
-    Y = pmin(logT, logC)
-    response = Surv(Y, censor, type = "right")
-    
-    start = Sys.time()
-    list = scqrGauss(X, Y, censor, tauSeq)
-    end = Sys.time()
-    time1[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    coef1[i, j] = estError(list$coeff, betaMat, tauSeq)
-    
-    start = Sys.time()
-    list = crq(response ~ X, method = "PengHuang", grid = grid)
-    end = Sys.time()
-    time2[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    tt = ncol(list$sol)
-    if (tt >= nTau - 1) {
-      coef2[i, j] = estError(list$sol[2:(p + 2), ], betaMat[, 1:tt], tauSeq)
-    }
-    
-    setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
-  }
-}
-
-
-
-write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/prop.csv")
-write.csv(time1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time1.csv")
-write.csv(time2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time2.csv")
-write.csv(coef1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef1.csv")
-write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv")
-#time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
-#coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
-
-time = rbind(colMeans(time1), colMeans(time2))
-coef = rbind(colMeans(coef1), colMeans(coef2))
+summ = getCoverPlot(cover1, cover2, cover3, p)
 setwd("~/Dropbox/Conquer/censoredQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(nseq, coef[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(1000, 20000), 
-     ylim = c(min(pretty(range(coef))), max(pretty(range(coef)))), xlab = "", ylab = "")
-lines(nseq, coef[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
-axis(1, nseq[c(2, 4, 6, 8, 10)], nseq[c(2, 4, 6, 8, 10)] / 1000, tick = TRUE, line = 0, cex.axis = 1.5)
-axis(2, pretty(range(coef)), line = 0, cex.axis = 1.5)
-box()
-abline(h = pretty(range(coef)), v = nseq[c(2, 4, 6, 8, 10)], col = "gray", lty = 2)
-#color = c("red", "blue")
-#labels = c("\\texttt{censored QR}", "\\texttt{proposed method}")
-#pch = c(1, 2)
-#legend(7, 0.014, labels, col = color, pch = pch, lwd = 5, cex = 2, box.lwd = 1, bg = "white")
-title(xlab = "Sample size (in thousands)", line = 2.5, cex.lab = 1.8)
-title(ylab = "Global estimation error", line = 2.5, cex.lab = 1.8)
+ggplot(summ, aes(x = method, y = cover, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Coverage") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 25), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
-## Time plot
+
+summ = getWidthPlot(width1, width2, width3, 1, M)
+setwd("~/Dropbox/Conquer/censoredQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(nseq, time[2, ], type = "b", pch = 1, cex = 1, lwd = 5, col = "red", axes = FALSE, xlim = c(1000, 20000), 
-     ylim = c(min(pretty(range(time))), max(pretty(range(time)))), xlab = "", ylab = "")
-lines(nseq, time[1, ], type = "b", pch = 2, cex = 1, lwd = 5, col = "blue")
-axis(1, nseq[c(2, 4, 6, 8, 10)], nseq[c(2, 4, 6, 8, 10)] / 1000, tick = TRUE, line = 0, cex.axis = 1.5)
-axis(2, pretty(range(time)), line = 0, cex.axis = 1.5)
-box()
-abline(h = pretty(range(time)), v = nseq[c(2, 4, 6, 8, 10)], col = "gray", lty = 2)
-color = c("red", "blue")
-labels = c("CQR", "smoothed CQR")
-pch = c(1, 2)
-legend("topleft", labels, col = color, pch = pch, lwd = 3, cex = 1.5, box.lwd = 1, bg = "white")
-title(xlab = "Sample size (in thousands)", line = 2.5, cex.lab = 1.8)
-title(ylab = "Time elapsed (in seconds)", line = 2.5, cex.lab = 1.8)
+ggplot(summ, aes(x = method, y = width, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("CI Width") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 25), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
+
+
+
 
