@@ -35,9 +35,9 @@ estError = function(betahat, beta, tauSeq) {
 #### Quantile process with fixed scale, hard to visualize
 n = 5000
 p = n / 50
-M = 2
-tauSeq = seq(0.2, 0.8, by = 0.05)
-grid = seq(0.2, 0.85, by = 0.05)
+M = 200
+tauSeq = seq(0.05, 0.8, by = 0.05)
+grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 coef1 = eff1 = matrix(0, M, nTau)
@@ -81,22 +81,22 @@ for (i in 1:M) {
   #eff1[i, ] = list$coeff[2, ]
   
   ## Peng and Huang
-  start = Sys.time()
-  list = crq(response ~ X, method = "PengHuang", grid = grid)
-  end = Sys.time()
-  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
-  tt = ncol(list$sol)
-  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
-  eff2[i, 1:tt] = list$sol[2, ]
+  #start = Sys.time()
+  #list = crq(response ~ X, method = "PengHuang", grid = grid)
+  #end = Sys.time()
+  #time[2, i] = as.numeric(difftime(end, start, units = "secs"))
+  #tt = ncol(list$sol)
+  #coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
+  #eff2[i, 1:tt] = list$sol[2, ]
   #eff2[i, 1:tt] = list$sol[3, ]
   
   ## Portnoy
-  start = Sys.time()
-  list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
-  end = Sys.time()
-  time[3, i] = as.numeric(difftime(end, start, units = "secs"))
-  coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 5:17] - betaMat)^2))
-  eff3[i, ] = list$sol[2, 5:17]
+  #start = Sys.time()
+  #list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
+  #end = Sys.time()
+  #time[3, i] = as.numeric(difftime(end, start, units = "secs"))
+  #coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 5:17] - betaMat)^2))
+  #eff3[i, ] = list$sol[2, 5:17]
   #eff2[i, 1:tt] = list$sol[3, ]
   
   setTxtProgressBar(pb, i / M)
@@ -104,9 +104,9 @@ for (i in 1:M) {
 
 
 setwd("~/Dropbox/Conquer/censoredQR/Code")
-write.csv(time, "Simulation/time.csv")
-write.csv(rbind(coef1, coef2, coef3), "Simulation/coef.csv")
-write.csv(rbind(eff1, eff2, eff3), "Simulation/eff.csv")
+write.csv(time, "Simulation/time_homo.csv")
+write.csv(rbind(coef1, coef2, coef3), "Simulation/coef_homo.csv")
+write.csv(rbind(eff1, eff2, eff3), "Simulation/eff_homo.csv")
 
 
 
@@ -120,7 +120,7 @@ eff2 = eff2[-index, ]
 eff3 = eff3[-index, ]
 
 setwd("~/Dropbox/Conquer/censoredQR/Code")
-est = rbind(colMeans(coef1), colMeans(coef2))
+est = rbind(colMeans(coef1), colMeans(coef2), colMeans(coef3))
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 plot(tauSeq[-nTau], est[2, -nTau], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 1), 
      ylim = c(min(pretty(range(est))), max(pretty(range(est)))), xlab = "", ylab = "")

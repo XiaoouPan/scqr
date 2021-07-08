@@ -275,7 +275,7 @@ Rcpp::List scqrGauss(const arma::mat& X, arma::vec Y, const arma::uvec& censor, 
   const int p = X.n_cols;
   const int m = tauSeq.size();
   if (h <= 0.05) {
-    h = std::max(std::sqrt((std::log(n) + p) / n), 0.05);
+    h = std::max(std::pow((std::log(n) + p) / n, 0.4), 0.05);
   }
   const double n1 = 1.0 / n;
   const double h1 = 1.0 / h;
@@ -325,7 +325,7 @@ Rcpp::List scqrGaussInf(const arma::mat& X, arma::vec Y, const arma::uvec& censo
   const int p = X.n_cols;
   const int m = tauSeq.size();
   if (h <= 0.05) {
-    h = std::max(std::sqrt((std::log(n) + p) / n), 0.05);
+    h = std::max(std::pow((std::log(n) + p) / n, 0.4), 0.05);
   }
   const double n1 = 1.0 / n;
   const double h1 = 1.0 / h;
