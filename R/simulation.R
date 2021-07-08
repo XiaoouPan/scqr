@@ -81,22 +81,22 @@ for (i in 1:M) {
   #eff1[i, ] = list$coeff[2, ]
   
   ## Peng and Huang
-  #start = Sys.time()
-  #list = crq(response ~ X, method = "PengHuang", grid = grid)
-  #end = Sys.time()
-  #time[2, i] = as.numeric(difftime(end, start, units = "secs"))
-  #tt = ncol(list$sol)
-  #coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
-  #eff2[i, 1:tt] = list$sol[2, ]
+  start = Sys.time()
+  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  end = Sys.time()
+  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
+  tt = ncol(list$sol)
+  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
+  eff2[i, 1:tt] = list$sol[2, ]
   #eff2[i, 1:tt] = list$sol[3, ]
   
   ## Portnoy
-  #start = Sys.time()
-  #list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
-  #end = Sys.time()
-  #time[3, i] = as.numeric(difftime(end, start, units = "secs"))
-  #coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 5:17] - betaMat)^2))
-  #eff3[i, ] = list$sol[2, 5:17]
+  start = Sys.time()
+  list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
+  end = Sys.time()
+  time[3, i] = as.numeric(difftime(end, start, units = "secs"))
+  coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 2:17] - betaMat)^2))
+  eff3[i, ] = list$sol[2, 2:17]
   #eff2[i, 1:tt] = list$sol[3, ]
   
   setTxtProgressBar(pb, i / M)
