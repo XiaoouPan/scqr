@@ -35,9 +35,9 @@ estError = function(betahat, beta, tauSeq) {
 #### Quantile process with fixed scale, hard to visualize
 n = 5000
 p = n / 50
-M = 100
-tauSeq = seq(0.05, 0.95, by = 0.05)
-grid = seq(0.05, 0.95, by = 0.05)
+M = 1
+tauSeq = seq(0.2, 0.8, by = 0.05)
+grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 coef1 = eff1 = matrix(0, M, nTau)
@@ -70,6 +70,7 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
+  ## Smoothed CQR
   start = Sys.time()
   list = scqrGauss(X, Y, censor, tauSeq)
   end = Sys.time()
@@ -78,6 +79,17 @@ for (i in 1:M) {
   eff1[i, ] = list$coeff[1, ]
   #eff1[i, ] = list$coeff[2, ]
   
+  ## Peng and Huang
+  start = Sys.time()
+  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  end = Sys.time()
+  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
+  tt = ncol(list$sol)
+  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
+  eff2[i, 1:tt] = list$sol[2, ]
+  #eff2[i, 1:tt] = list$sol[3, ]
+  
+  ## Portnoy
   start = Sys.time()
   list = crq(response ~ X, method = "PengHuang", grid = grid)
   end = Sys.time()
