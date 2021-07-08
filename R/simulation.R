@@ -42,7 +42,8 @@ nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 coef1 = eff1 = matrix(0, M, nTau)
 coef2 = eff2 = matrix(0, M, nTau)
-time = matrix(0, 2, M)
+coef3 = eff3 = matrix(0, M, nTau)
+time = matrix(0, 3, M)
 prop = rep(0, M)
 
 pb = txtProgressBar(style = 3)
@@ -91,12 +92,11 @@ for (i in 1:M) {
   
   ## Portnoy
   start = Sys.time()
-  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  list = crq(response ~ X, method = "Portnoy", grid = grid)
   end = Sys.time()
-  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
-  tt = ncol(list$sol)
-  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
-  eff2[i, 1:tt] = list$sol[2, ]
+  time[3, i] = as.numeric(difftime(end, start, units = "secs"))
+  coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 5:17] - betaMat)^2))
+  eff3[i, ] = list$sol[2, 5:17]
   #eff2[i, 1:tt] = list$sol[3, ]
   
   setTxtProgressBar(pb, i / M)
@@ -106,8 +106,10 @@ rowMeans(time)
 index = which(coef2[, nTau - 1] == 0)
 coef1 = coef1[-index, ]
 coef2 = coef2[-index, ]
+coef3 = coef3[-index, ]
 eff1 = eff1[-index, ]
 eff2 = eff2[-index, ]
+eff3 = eff3[-index, ]
 
 setwd("~/Dropbox/Conquer/censoredQR/Code")
 est = rbind(colMeans(coef1), colMeans(coef2))
