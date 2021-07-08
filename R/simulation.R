@@ -35,7 +35,7 @@ estError = function(betahat, beta, tauSeq) {
 #### Quantile process with fixed scale, hard to visualize
 n = 5000
 p = n / 50
-M = 1
+M = 2
 tauSeq = seq(0.2, 0.8, by = 0.05)
 grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
@@ -92,7 +92,7 @@ for (i in 1:M) {
   
   ## Portnoy
   start = Sys.time()
-  list = crq(response ~ X, method = "Portnoy", grid = grid)
+  list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
   end = Sys.time()
   time[3, i] = as.numeric(difftime(end, start, units = "secs"))
   coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 5:17] - betaMat)^2))
@@ -101,6 +101,14 @@ for (i in 1:M) {
   
   setTxtProgressBar(pb, i / M)
 }
+
+
+setwd("~/Dropbox/Conquer/censoredQR/Code")
+write.csv(time, "Simulation/time.csv")
+write.csv(rbind(coef1, coef2, coef3), "Simulation/coef.csv")
+write.csv(rbind(eff1, eff2, eff3), "Simulation/eff.csv")
+
+
 
 rowMeans(time)
 index = which(coef2[, nTau - 1] == 0)
