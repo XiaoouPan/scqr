@@ -121,21 +121,63 @@ eff2 = eff2[-index, ]
 eff3 = eff3[-index, ]
 
 
+
+setwd("~/Dropbox/Conquer/SCQR/Code")
+coe.data = as.matrix(read.csv("Simulation/coef_homo.csv")[, -1])
+coef1 = coe.data[1:500, ]
+coef2 = coe.data[501:1000, ]
+coef3 = coe.data[1001:1500, ]
+
 ### Estimation plots
-setwd("~/Dropbox/Conquer/censoredQR/Code")
+
+
+sd1 = colSds(coef1)
+mean1 = colMeans(coef1)
+low = mean1 - sd1
+upp = mean1 + sd1
+dat = cbind(tauSeq, mean1, low, upp)
+sd2 = colSds(coef2)
+mean2 = colMeans(coef2)
+low = mean2 - sd2
+upp = mean2 + sd2
+dat = rbind(dat, cbind(tauSeq, mean2, low, upp))
+sd3 = colSds(coef3)
+mean3 = colMeans(coef3)
+low = mean3 - sd3
+upp = mean3 + sd3
+dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
+dat = as.data.frame(dat)
+colnames(dat) = c("quantile", "coef", "low", "upp")
+dat$type = c(rep("SCQR", nTau), rep("PengHuang", nTau), rep("Portnoy", nTau))
+dat$type = factor(dat$type, levels = c("SCQR", "PengHuang", "Portnoy"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = quantile, y = coef, color = type)) +
+  geom_line(aes(y = coef, color = type), size = 1) + 
+  geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3) + theme_bw() + xlab("Quantile level $\\tau$") + 
+  ylab("Estimation error in $||\\cdot||_2$") + 
+  theme(legend.position = c(0.75, 0.75), legend.title = element_blank(), legend.text = element_text(size = 30), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 13), 
+        axis.title = element_text(size = 15))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+
+
 est = rbind(colMeans(coef1), colMeans(coef2), colMeans(coef3))
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(tauSeq, est[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 0.85), ylim = c(0.1, 1.4), xlab = "", ylab = "")
+plot(tauSeq, est[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 0.85), ylim = c(0.3, 2.0), xlab = "", ylab = "")
 lines(tauSeq, est[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
 lines(tauSeq, est[3, ], type = "b", pch = 4, lwd = 5, cex = 1, col = "forestgreen")
 axis(1, tauSeq[c(1, 6, 11, 16)], line = 0, cex.axis = 1.5)
-axis(2, c(0.1, 0.4, 0.7, 1, 1.3), line = 0, cex.axis = 1.5)
+axis(2, c(0.3, 0.7, 1.1, 1.5, 1.9), line = 0, cex.axis = 1.5)
 box()
-abline(h = c(0.1, 0.4, 0.7, 1, 1.3), v = tauSeq[c(1, 6, 11, 16)], col = "gray", lty = 2)
-#color = c("red", "blue", "forestgreen")
-#labels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Portnoy}")
-#pch = c(1, 2, 4)
-#legend("topright", labels, col = color, pch = pch, lwd = 5, cex = 2, box.lwd = 1, bg = "white")
+abline(h = c(0.3, 0.7, 1.1, 1.5, 1.9), v = tauSeq[c(1, 6, 11, 16)], col = "gray", lty = 2)
+color = c("red", "blue", "forestgreen")
+labels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Portnoy}")
+pch = c(1, 2, 4)
+legend("topright", labels, col = color, pch = pch, lwd = 5, cex = 2, box.lwd = 1, bg = "white")
 title(xlab = "Quantile level $\\tau$", line = 2.5, cex.lab = 1.8)
 title(ylab = "Estimation error in $||\\cdot||_2$", line = 2.5, cex.lab = 1.8)
 dev.off()
