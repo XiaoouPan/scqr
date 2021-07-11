@@ -128,9 +128,8 @@ coef1 = coe.data[1:500, ]
 coef2 = coe.data[501:1000, ]
 coef3 = coe.data[1001:1500, ]
 
+
 ### Estimation plots
-
-
 sd1 = colSds(coef1)
 mean1 = colMeans(coef1)
 low = mean1 - sd1
@@ -148,15 +147,15 @@ upp = mean3 + sd3
 dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
 dat = as.data.frame(dat)
 colnames(dat) = c("quantile", "coef", "low", "upp")
-dat$type = c(rep("SCQR", nTau), rep("PengHuang", nTau), rep("Portnoy", nTau))
-dat$type = factor(dat$type, levels = c("SCQR", "PengHuang", "Portnoy"))
+dat$type = c(rep("\\texttt{Our method}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau), rep("\\texttt{Portnoy}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Portnoy}"))
 
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = quantile, y = coef, color = type)) +
   geom_line(aes(y = coef, color = type), size = 1) + 
   geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3) + theme_bw() + xlab("Quantile level $\\tau$") + 
   ylab("Estimation error in $||\\cdot||_2$") + 
-  theme(legend.position = c(0.75, 0.75), legend.title = element_blank(), legend.text = element_text(size = 30), legend.key.size = unit(1, "cm"),
+  theme(legend.position = c(0.7, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 13), 
         axis.title = element_text(size = 15))
 dev.off()
@@ -185,7 +184,46 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Quantile effects plots
-setwd("~/Dropbox/Conquer/censoredQR/Code")
+setwd("~/Dropbox/Conquer/SCQR/Code")
+
+eff.data = as.matrix(read.csv("Simulation/eff_homo.csv")[, -1])
+eff1 = eff.data[1:500, ]
+eff2 = eff.data[501:1000, ]
+eff3 = eff.data[1001:1500, ]
+
+sd1 = colSds(eff1)
+mean1 = colMeans(eff1)
+low = mean1 - sd1
+upp = mean1 + sd1
+dat = cbind(tauSeq, mean1, low, upp)
+sd2 = colSds(eff2)
+mean2 = colMeans(eff2)
+low = mean2 - sd2
+upp = mean2 + sd2
+dat = rbind(dat, cbind(tauSeq, mean2, low, upp))
+sd3 = colSds(eff3)
+mean3 = colMeans(eff3)
+low = mean3 - sd3
+upp = mean3 + sd3
+dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
+dat = rbind(dat, cbind(tauSeq, beta0, beta0, beta0))
+dat = as.data.frame(dat)
+colnames(dat) = c("quantile", "eff", "low", "upp")
+dat$type = c(rep("\\texttt{Our method}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau), rep("\\texttt{Portnoy}", nTau), 
+             rep("\\texttt{True effects}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Portnoy}", "\\texttt{True effects}"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = quantile, y = eff, color = type)) +
+  geom_line(aes(y = eff, color = type), size = 1) + 
+  geom_ribbon(aes(y = eff, ymin = low, ymax = upp, fill = type), alpha = 0.3) + theme_bw() + xlab("Quantile level $\\tau$") + 
+  ylab("Estimated quantile effects") + theme(legend.position = "none", axis.text = element_text(size = 13), axis.title = element_text(size = 15))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+
+
 est = rbind(colMeans(eff1), colMeans(eff2), colMeans(eff3))
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 plot(tauSeq, est[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 0.85), ylim = c(-2.6, 1.5), xlab = "", ylab = "")
@@ -207,10 +245,11 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Running time lots
-meth = c(rep("Our method", M), rep("Peng \\& Huang", M), rep("Portnoy", M))
+time = as.matrix(read.csv("Simulation/time_homo.csv")[, -1])
+meth = c(rep("Our method", 500), rep("Peng \\& Huang", 500), rep("Portnoy",500))
 meth = factor(meth, levels = c("Our method", "Peng \\& Huang", "Portnoy"))
 rst = data.frame("time" = c(time[1, ], time[2, ], time[3, ]), "method" = meth)
-tikz("plot.tex", standAlone = TRUE, width = 6, height = 5)
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(rst, aes(x = method, y = time, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
   scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + 
