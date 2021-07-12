@@ -36,7 +36,7 @@ estError = function(betahat, beta, tauSeq) {
 #### Quantile process with fixed scale, hard to visualize
 n = 5000
 p = n / 50
-M = 200
+M = 500
 tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
@@ -123,7 +123,7 @@ eff3 = eff3[-index, ]
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code")
-coe.data = as.matrix(read.csv("Simulation/coef_homo.csv")[, -1])
+coe.data = as.matrix(read.csv("Simulation/coef_hetero.csv")[, -1])
 coef1 = coe.data[1:500, ]
 coef2 = coe.data[501:1000, ]
 coef3 = coe.data[1001:1500, ]
@@ -154,10 +154,10 @@ tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = quantile, y = coef, color = type)) +
   geom_line(aes(y = coef, color = type), size = 1) + 
   geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3) + theme_bw() + xlab("Quantile level $\\tau$") + 
-  ylab("Estimation error in $||\\cdot||_2$") + 
-  theme(legend.position = c(0.7, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 13), 
-        axis.title = element_text(size = 15))
+  ylab("Estimation error in $||\\cdot||_2$") + theme(legend.position = "none", axis.text = element_text(size = 13), axis.title = element_text(size = 15))
+  #theme(legend.position = c(0.7, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 13), 
+  #      axis.title = element_text(size = 15))
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
@@ -186,7 +186,7 @@ tools::texi2dvi("plot.tex", pdf = T)
 ### Quantile effects plots
 setwd("~/Dropbox/Conquer/SCQR/Code")
 
-eff.data = as.matrix(read.csv("Simulation/eff_homo.csv")[, -1])
+eff.data = as.matrix(read.csv("Simulation/eff_hetero.csv")[, -1])
 eff1 = eff.data[1:500, ]
 eff2 = eff.data[501:1000, ]
 eff3 = eff.data[1001:1500, ]
@@ -245,14 +245,15 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Running time lots
-time = as.matrix(read.csv("Simulation/time_homo.csv")[, -1])
+time = as.matrix(read.csv("Simulation/time_hetero.csv")[, -1])
 meth = c(rep("Our method", 500), rep("Peng \\& Huang", 500), rep("Portnoy",500))
 meth = factor(meth, levels = c("Our method", "Peng \\& Huang", "Portnoy"))
 rst = data.frame("time" = c(time[1, ], time[2, ], time[3, ]), "method" = meth)
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(rst, aes(x = method, y = time, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + theme_bw() + 
+  #scale_y_continuous(breaks = seq(0, 125, 25)) + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 25), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
