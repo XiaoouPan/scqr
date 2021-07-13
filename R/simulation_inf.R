@@ -21,17 +21,6 @@ getSigma = function(p) {
   return (sig)
 }
 
-estError = function(betahat, beta, tauSeq) {
-  nTau = min(length(tauSeq), ncol(betahat) + 1)
-  diff = betahat - beta
-  err = sqrt(colSums((betahat - beta)^2))
-  accu = 0
-  for (k in 2:nTau) {
-    accu = accu + err[k - 1] * (tauSeq[k] - tauSeq[k - 1])
-  }
-  return (accu)
-}
-
 getPivCI = function(est, estBoot, alpha) {
   q1 = rowQuantiles(estBoot, probs = alpha / 2)
   q2 = rowQuantiles(estBoot, probs = 1 - alpha / 2)
@@ -77,7 +66,7 @@ getWidthPlot = function(width1, width2, width3, j, M) {
 #### Fixed scale,
 n = 2000
 p = n / 50
-M = 1000
+M = 500
 tauSeq = seq(0.1, 0.5, by = 0.1)
 grid = seq(0.1, 0.5, by = 0.1)
 nTau = length(tauSeq)
@@ -91,11 +80,10 @@ time = prop = rep(0, M)
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
-  Sigma = getSigma(p)
-  X = mvrnorm(n, rep(0, p), Sigma)
-  #Sigma = getSigma(45)
-  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
+  #Sigma = getSigma(p)
+  #X = mvrnorm(n, rep(0, p), Sigma)
+  Sigma = getSigma(15)
+  X = cbind(mvrnorm(n, rep(0, 15), Sigma), 4 * draw.d.variate.uniform(n, 15, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
   beta = runif(p, -2, 2)
