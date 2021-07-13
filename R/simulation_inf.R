@@ -57,7 +57,8 @@ jack = function(X, Y, censor, n, grid, nTau, B = 1000) {
 xyPair = function(X, Y, censor, n, grid, nTau, B = 1000) {
   rst = matrix(NA, p + 1, B)
   for (i in 1:B) {
-    s = sample(1:n, n)
+    w = sample(1:n, n, replace = TRUE)
+    s = sort(w)
     yb = Y[s]
     xb = X[s, ]
     cb = censor[s]  
@@ -98,9 +99,9 @@ getWidthPlot = function(width1, width2, width3, j, M) {
   return (rst)
 }
 
-n = 500
+n = 1000
 p = n / 50
-M = 1
+M = 2
 tauSeq = seq(0.1, 0.5, by = 0.1)
 grid = seq(0.1, 0.6, by = 0.1)
 nTau = length(tauSeq)
@@ -116,8 +117,8 @@ for (i in 1:M) {
   set.seed(i)
   #Sigma = getSigma(p)
   #X = mvrnorm(n, rep(0, p), Sigma)
-  Sigma = getSigma(4)
-  X = cbind(mvrnorm(n, rep(0, 4), Sigma), 4 * draw.d.variate.uniform(n, 4, Sigma) - 2, matrix(rbinom(2 * n, 1, c(0.5, 0.5)), n, 2))
+  Sigma = getSigma(8)
+  X = cbind(mvrnorm(n, rep(0, 8), Sigma), 4 * draw.d.variate.uniform(n, 8, Sigma) - 2, matrix(rbinom(4 * n, 1, c(0.5, 0.5)), n, 4))
   err = rt(n, 2)
   ## Homo
   beta = runif(p, -2, 2)
@@ -131,7 +132,6 @@ for (i in 1:M) {
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
-  prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
@@ -198,6 +198,7 @@ for (i in 1:M) {
   setTxtProgressBar(pb, i / M)
 }
 
+rbind(time1, time2, time3)
 
 
 write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/time.csv")
