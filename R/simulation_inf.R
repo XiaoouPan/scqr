@@ -36,6 +36,42 @@ getNormCI = function(est, sd, z) {
   return (cbind(lower, upper))
 }
 
+jack = function(X, Y, censor, n, grid, nTau, B = 1000) {
+  mboot = 2 * ceiling(sqrt(n))
+  rst = matrix(NA, p + 1, B)
+  for (i in 1:B) {
+    s = sample(1:n, mboot)
+    yb = Y[-s]
+    xb = X[-s, ]
+    cb = censor[-s]  
+    resb = Surv(yb, cb, type = "right")
+    list = crq(resb ~ xb, method = "PengHuang", grid = grid)
+    tt = ncol(list$sol)
+    if (tt >= nTau) {
+      rst[, i] = list$sol[2:(p + 2), nTau]
+    }
+  }
+  return (rst)
+}
+
+xyPair = function(X, Y, censor, n, grid, nTau, B = 1000) {
+  rst = matrix(NA, p + 1, B)
+  for (i in 1:B) {
+    s = sample(1:n, n)
+    yb = Y[s]
+    xb = X[s, ]
+    cb = censor[s]  
+    resb = Surv(yb, cb, type = "right")
+    list = crq(resb ~ xb, method = "PengHuang", grid = grid)
+    tt = ncol(list$sol)
+    if (tt >= nTau) {
+      rst[, i] = as.numeric(list$sol[2:(p + 2), nTau])
+    }
+  }
+  return (rst)
+}
+
+
 getCoverage = function(ci, beta) {
   return (ci[-1, 1] <  beta & ci[-1, 2] > beta)
 }
@@ -62,28 +98,26 @@ getWidthPlot = function(width1, width2, width3, j, M) {
   return (rst)
 }
 
-
-#### Fixed scale,
-n = 2000
+n = 500
 p = n / 50
-M = 500
+M = 1
 tauSeq = seq(0.1, 0.5, by = 0.1)
-grid = seq(0.1, 0.5, by = 0.1)
+grid = seq(0.1, 0.6, by = 0.1)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 alpha = 0.05
 z = qnorm(1 - alpha / 2)
-cover1 = cover2 = cover3 = matrix(0, M, p)
-width1 = width2 = width3 = matrix(0, M, p)
-time = prop = rep(0, M)
+cover1 = cover2 = cover3 = cover4 = cover5 = cover6 = cover7 = cover8 = cover9 = matrix(NA, M, p)
+width1 = width2 = width3 = width4 = width5 = width6 = width7 = width8 = width9 = matrix(NA, M, p)
+time1 = time2 = time3 = rep(NA, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
   #Sigma = getSigma(p)
   #X = mvrnorm(n, rep(0, p), Sigma)
-  Sigma = getSigma(15)
-  X = cbind(mvrnorm(n, rep(0, 15), Sigma), 4 * draw.d.variate.uniform(n, 15, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
+  Sigma = getSigma(4)
+  X = cbind(mvrnorm(n, rep(0, 4), Sigma), 4 * draw.d.variate.uniform(n, 4, Sigma) - 2, matrix(rbinom(2 * n, 1, c(0.5, 0.5)), n, 2))
   err = rt(n, 2)
   ## Homo
   beta = runif(p, -2, 2)
@@ -101,10 +135,11 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
+  ## Smoothed CQR
   start = Sys.time()
   list = scqrGaussInf(X, Y, censor, tauSeq, B = 1000)
   end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  time1[i] = as.numeric(difftime(end, start, units = "secs"))
   beta.hat = list$coeff
   beta.boot = list$boot
   ci.list = getPivCI(beta.hat[, nTau], beta.boot, alpha)
@@ -118,13 +153,53 @@ for (i in 1:M) {
   width2[i, ] = getWidth(ci.piv)
   width3[i, ] = getWidth(ci.norm)
   
+  ## Delete-d jackknife by Portnoy
+  start = Sys.time()
+  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  beta.boot = jack(X, Y, censor, n, grid, nTau, B = 1000)
+  end = Sys.time()
+  time2[i] = as.numeric(difftime(end, start, units = "secs"))
+  beta.hat = list$sol
+  tt = ncol(list$sol)
+  if (tt >= nTau) {
+    ci.list = getPivCI(beta.hat[2:(p + 2), nTau], beta.boot, alpha)
+    ci.per = ci.list$perCI
+    ci.piv = ci.list$pivCI
+    ci.norm = getNormCI(beta.hat[2:(p + 2), nTau], rowSds(beta.boot), z)
+    cover4[i, ] = getCoverage(ci.per, beta)
+    cover5[i, ] = getCoverage(ci.piv, beta)
+    cover6[i, ] = getCoverage(ci.norm, beta)
+    width4[i, ] = getWidth(ci.per)
+    width5[i, ] = getWidth(ci.piv)
+    width6[i, ] = getWidth(ci.norm)
+  }
+  
+  ## xy-pair resampling method
+  start = Sys.time()
+  list = crq(response ~ X, method = "PengHuang", grid = grid)
+  beta.boot = xyPair(X, Y, censor, n, grid, nTau, B = 1000)
+  end = Sys.time()
+  time3[i] = as.numeric(difftime(end, start, units = "secs"))
+  beta.hat = list$sol
+  tt = ncol(list$sol)
+  if (tt >= nTau) {
+    ci.list = getPivCI(beta.hat[2:(p + 2), nTau], beta.boot, alpha)
+    ci.per = ci.list$perCI
+    ci.piv = ci.list$pivCI
+    ci.norm = getNormCI(beta.hat[2:(p + 2), nTau], rowSds(beta.boot), z)
+    cover7[i, ] = getCoverage(ci.per, beta)
+    cover8[i, ] = getCoverage(ci.piv, beta)
+    cover9[i, ] = getCoverage(ci.norm, beta)
+    width7[i, ] = getWidth(ci.per)
+    width8[i, ] = getWidth(ci.piv)
+    width9[i, ] = getWidth(ci.norm)
+  }
+  
   setTxtProgressBar(pb, i / M)
 }
 
 
-mean(time)
 
-write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/prop.csv")
 write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/time.csv")
 write.csv(cover1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover1.csv")
 write.csv(cover2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover2.csv")
