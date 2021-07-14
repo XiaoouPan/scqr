@@ -40,10 +40,11 @@ jack = function(X, Y, censor, n, grid, nTau, B = 1000) {
   mboot = 2 * ceiling(sqrt(n))
   rst = matrix(NA, p + 1, B)
   for (i in 1:B) {
-    s = sample(1:n, mboot)
-    yb = Y[-s]
-    xb = X[-s, ]
-    cb = censor[-s]  
+    s = sample(1:n,  n - mboot)
+    s = sort(s)
+    yb = Y[s]
+    xb = X[s, ]
+    cb = censor[s]  
     resb = Surv(yb, cb, type = "right")
     list = crq(resb ~ xb, method = "PengHuang", grid = grid)
     tt = ncol(list$sol)
@@ -83,25 +84,25 @@ getWidth = function(ci) {
 
 
 getCoverPlot = function(cover1, cover2, cover3, p) {
-  rst1 = colMeans(cover1)
-  rst2 = colMeans(cover2)
-  rst3 = colMeans(cover3)
-  meth = c(rep("per", p), rep("piv", p), rep("norm", p))
-  meth = factor(meth, levels = c("per", "piv", "norm"))
+  rst1 = colMeans(cover1, na.rm = TRUE)
+  rst2 = colMeans(cover2, na.rm = TRUE)
+  rst3 = colMeans(cover3, na.rm = TRUE)
+  meth = c(rep("Multi", p), rep("Jack", p), rep("Pair", p))
+  meth = factor(meth, levels = c("Multi", "Jack", "Pair"))
   rst = data.frame("cover" = c(rst1, rst2, rst3), "method" = meth)
   return (rst)
 }
 
 getWidthPlot = function(width1, width2, width3, j, M) {
-  meth = c(rep("per", M), rep("piv", M), rep("norm", M))
-  meth = factor(meth, levels = c("per", "piv", "norm"))
+  meth = c(rep("Multi", M), rep("Jack", M), rep("Pair", M))
+  meth = factor(meth, levels = c("Multi", "Jack", "Pair"))
   rst = data.frame("width" = c(width1[, j], width2[, j], width3[, j]), "method" = meth)
   return (rst)
 }
 
 n = 1000
 p = n / 50
-M = 2
+M = 500
 tauSeq = seq(0.1, 0.5, by = 0.1)
 grid = seq(0.1, 0.6, by = 0.1)
 nTau = length(tauSeq)
@@ -201,13 +202,33 @@ for (i in 1:M) {
 rbind(time1, time2, time3)
 
 
-write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/time.csv")
-write.csv(cover1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover1.csv")
-write.csv(cover2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover2.csv")
-write.csv(cover3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover3.csv")
-write.csv(width1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width1.csv")
-write.csv(width2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width2.csv")
-write.csv(width3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width3.csv")
+#write.csv(time, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/time.csv")
+#write.csv(cover1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover1.csv")
+#write.csv(cover2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover2.csv")
+#write.csv(cover3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/cover3.csv")
+#write.csv(width1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width1.csv")
+#write.csv(width2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width2.csv")
+#write.csv(width3, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Inference/width3.csv")
+
+
+
+
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/Inference/hetero")
+time = as.matrix(read.csv("time.csv")[, -1])
+cover_mb = as.matrix(read.csv("cover_mb.csv")[, -1])
+cover_jack = as.matrix(read.csv("cover_jack.csv")[, -1])
+cover_pair = as.matrix(read.csv("cover_pair.csv")[, -1])
+width_mb = as.matrix(read.csv("width_mb.csv")[, -1])
+width_jack = as.matrix(read.csv("width_jack.csv")[, -1])
+width_pair = as.matrix(read.csv("width_pair.csv")[, -1])
+
+
+
+
+### coverage plot
+cover1 = cover_mb[1:500, ]
+cover2 = cover_jack[1:500, ]
+cover3 = cover_pair[1:500, ]
 
 summ = getCoverPlot(cover1, cover2, cover3, p)
 setwd("~/Dropbox/Conquer/censoredQR/Code")
@@ -220,6 +241,12 @@ dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
 
+
+### width plot
+width1 = width_mb[1:500, ]
+width2 = width_jack[1:500, ]
+width3 = width_pair[1:500, ]
+
 summ = getWidthPlot(width1, width2, width3, 1, M)
 setwd("~/Dropbox/Conquer/censoredQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
@@ -230,6 +257,20 @@ ggplot(summ, aes(x = method, y = width, fill = method)) +
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
+
+
+
+### time plot
+meth = c(rep("Multi", M), rep("Jack", M), rep("Pair", M))
+meth = factor(meth, levels = c("Multi", "Jack", "Pair"))
+rst = data.frame("time" = c(time[1, ], time[2, ], time[3, ]), "method" = meth)
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(rst, aes(x = method, y = time, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + theme_bw() + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
 
 
 
