@@ -34,7 +34,7 @@ accuError = function(betahat, beta, tauSeq) {
 
 
 #### Growing dimension and sample size
-nseq = seq(2000, 20000, by = 2000)
+nseq = seq(1000, 10000, by = 1000)
 pseq = floor(nseq / 50)
 l = length(nseq)
 tauSeq = seq(0.05, 0.8, by = 0.05)
@@ -113,20 +113,105 @@ write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code")
-coef = as.matrix(read.csv("Simulation/growing/coef_homo.csv")[, -1])
+coef = as.matrix(read.csv("Simulation/growing/coef_hetero.csv")[, -1])
 coef1 = coef[1:500, ]
 coef2 = coef[501:1000, ]
-accu = as.matrix(read.csv("Simulation/growing/accu_homo.csv")[, -1])
+accu = as.matrix(read.csv("Simulation/growing/accu_hetero.csv")[, -1])
 accu1 = accu[1:500, ]
 accu2 = accu[501:1000, ]
-time = as.matrix(read.csv("Simulation/growing/time_homo.csv")[, -1])
+time = as.matrix(read.csv("Simulation/growing/time_hetero.csv")[, -1])
 time1 = time[1:500, ]
 time2 = time[501:1000, ]
 
 
-time = rbind(colMeans(time1, na.rm = TRUE), colMeans(time2, na.rm = TRUE))
-coef = rbind(colMeans(coef1, na.rm = TRUE), colMeans(coef2, na.rm = TRUE))
-accu = rbind(colMeans(accu1, na.rm = TRUE), colMeans(accu2, na.rm = TRUE))
+### Global estimation error 
+mean1 = colMeans(accu1, na.rm = TRUE)
+mean2 = colMeans(accu2, na.rm = TRUE)
+dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
+dat = as.data.frame(dat)
+colnames(dat) = c("size", "coef")
+dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = size, y = coef)) +
+  geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid")) +
+  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
+  theme_bw() + xlab("Sample size") + ylab("Global estimation error") +
+  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+        axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+### Estimation error at a certain quantile
+mean1 = colMeans(coef1, na.rm = TRUE)
+mean2 = colMeans(coef2, na.rm = TRUE)
+dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
+dat = as.data.frame(dat)
+colnames(dat) = c("size", "coef")
+dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = size, y = coef)) +
+  geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid")) +
+  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
+  theme_bw() + xlab("Sample size") + ylab("Estimation error at $\\tau = 0.7$") +
+  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+        axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+
+## Time plot
+mean1 = colMeans(time1, na.rm = TRUE)
+mean2 = colMeans(time2, na.rm = TRUE)
+dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
+dat = as.data.frame(dat)
+colnames(dat) = c("size", "time")
+dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = size, y = time)) +
+  geom_line(aes(y = time, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid")) +
+  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
+  theme_bw() + xlab("Sample size") + ylab("Elapsed time (in seconds)") +
+  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  theme(legend.position = c(0.4, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+        axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Old graphs without using ggplot
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 plot(nseq, coef[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(1000, 20000), 
