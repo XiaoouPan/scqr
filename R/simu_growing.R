@@ -41,7 +41,7 @@ tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-M = 1
+M = 500
 coef1 = coef2 = coef3 = time1 = time2 = time3 = prop = matrix(0, M, l)
 accu1 = accu2 = accu3 = matrix(0, M, l)
 
@@ -111,9 +111,23 @@ write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv
 #time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
 #coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
 
-time = rbind(colMeans(time1), colMeans(time2))
-coef = rbind(colMeans(coef1), colMeans(coef2))
-setwd("~/Dropbox/Conquer/censoredQR/Code")
+
+setwd("~/Dropbox/Conquer/SCQR/Code")
+coef = as.matrix(read.csv("Simulation/growing/coef_homo.csv")[, -1])
+coef1 = coef[1:500, ]
+coef2 = coef[501:1000, ]
+accu = as.matrix(read.csv("Simulation/growing/accu_homo.csv")[, -1])
+accu1 = accu[1:500, ]
+accu2 = accu[501:1000, ]
+time = as.matrix(read.csv("Simulation/growing/time_homo.csv")[, -1])
+time1 = time[1:500, ]
+time2 = time[501:1000, ]
+
+
+time = rbind(colMeans(time1, na.rm = TRUE), colMeans(time2, na.rm = TRUE))
+coef = rbind(colMeans(coef1, na.rm = TRUE), colMeans(coef2, na.rm = TRUE))
+accu = rbind(colMeans(accu1, na.rm = TRUE), colMeans(accu2, na.rm = TRUE))
+setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 plot(nseq, coef[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(1000, 20000), 
      ylim = c(min(pretty(range(coef))), max(pretty(range(coef)))), xlab = "", ylab = "")
