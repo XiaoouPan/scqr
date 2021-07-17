@@ -35,7 +35,7 @@ accuError = function(betahat, beta, tauSeq) {
 
 #### Growing dimension and sample size
 nseq = seq(1000, 10000, by = 1000)
-pseq = floor(nseq / 50)
+pseq = floor(nseq / 100)
 l = length(nseq)
 tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
@@ -103,11 +103,11 @@ for (j in 1:l) {
 
 
 
-write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/prop.csv")
-write.csv(time1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time1.csv")
-write.csv(time2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time2.csv")
-write.csv(coef1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef1.csv")
-write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv")
+#write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/prop.csv")
+#write.csv(time1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time1.csv")
+#write.csv(time2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time2.csv")
+#write.csv(coef1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef1.csv")
+#write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv")
 #time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
 #coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
 
@@ -162,10 +162,10 @@ ggplot(dat, aes(x = size, y = coef)) +
   scale_linetype_manual(values = c("twodash", "solid")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
   theme_bw() + xlab("Sample size") + ylab("Estimation error at $\\tau = 0.7$") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
+  theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  #theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+  #      axis.title = element_text(size = 20))
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
@@ -187,7 +187,7 @@ ggplot(dat, aes(x = size, y = time)) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
   theme_bw() + xlab("Sample size") + ylab("Elapsed time (in seconds)") +
   #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.4, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  theme(legend.position = c(0.35, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
         axis.title = element_text(size = 20))
 dev.off()

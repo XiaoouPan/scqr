@@ -83,24 +83,44 @@ getWidth = function(ci) {
 }
 
 
-getCoverPlot = function(cover1, cover2, cover3, p) {
+#getCoverPlot = function(cover1, cover2, cover3, p) {
+#  rst1 = c(colMeans(cover1[1:500, ], na.rm = TRUE), colMeans(cover1[501:1000, ], na.rm = TRUE), colMeans(cover1[1001:1500, ], na.rm = TRUE))
+#  rst2 = c(colMeans(cover2[1:500, ], na.rm = TRUE), colMeans(cover2[501:1000, ], na.rm = TRUE), colMeans(cover2[1001:1500, ], na.rm = TRUE))
+#  rst3 = c(colMeans(cover3[1:500, ], na.rm = TRUE), colMeans(cover3[501:1000, ], na.rm = TRUE), colMeans(cover3[1001:1500, ], na.rm = TRUE))
+#  meth = c(rep("Multiplier", 3 * p), rep("Jackknife", 3 * p), rep("Pair", 3 * p))
+#  meth = factor(meth, levels = c("Multiplier", "Jackknife", "Pair"))
+#  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = p), 3)
+#  rst = data.frame("cover" = c(rst1, rst2, rst3), "method" = meth, "type" = type)
+#  return (rst)
+#}
+
+getCoverPlot = function(cover1, cover3, p) {
   rst1 = c(colMeans(cover1[1:500, ], na.rm = TRUE), colMeans(cover1[501:1000, ], na.rm = TRUE), colMeans(cover1[1001:1500, ], na.rm = TRUE))
-  rst2 = c(colMeans(cover2[1:500, ], na.rm = TRUE), colMeans(cover2[501:1000, ], na.rm = TRUE), colMeans(cover2[1001:1500, ], na.rm = TRUE))
   rst3 = c(colMeans(cover3[1:500, ], na.rm = TRUE), colMeans(cover3[501:1000, ], na.rm = TRUE), colMeans(cover3[1001:1500, ], na.rm = TRUE))
-  meth = c(rep("Multiplier", 3 * p), rep("Jackknife", 3 * p), rep("Pair", 3 * p))
-  meth = factor(meth, levels = c("Multiplier", "Jackknife", "Pair"))
-  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = p), 3)
-  rst = data.frame("cover" = c(rst1, rst2, rst3), "method" = meth, "type" = type)
+  meth = c(rep("Multiplier", 3 * p), rep("Pair", 3 * p))
+  meth = factor(meth, levels = c("Multiplier", "Pair"))
+  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = p), 2)
+  rst = data.frame("cover" = c(rst1, rst3), "method" = meth, "type" = type)
   return (rst)
 }
 
-getWidthPlot = function(width1, width2, width3, j, p) {
-  meth = c(rep("Multiplier", 3 * M), rep("Jackknife", 3 * M), rep("Pair", 3 * M))
-  meth = factor(meth, levels = c("Multiplier", "Jackknife", "Pair"))
-  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = M), 3)
-  rst = data.frame("width" = c(width1[, j], width2[, j], width3[, j]), "method" = meth, "type" = type)
+
+#getWidthPlot = function(width1, width2, width3, j, p) {
+#  meth = c(rep("Multiplier", 3 * M), rep("Jackknife", 3 * M), rep("Pair", 3 * M))
+#  meth = factor(meth, levels = c("Multiplier", "Jackknife", "Pair"))
+#  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = M), 3)
+#  rst = data.frame("width" = c(width1[, j], width2[, j], width3[, j]), "method" = meth, "type" = type)
+#  return (rst)
+#}
+
+getWidthPlot = function(width1, width3, j, p) {
+  meth = c(rep("Multiplier", 3 * M), rep("Pair", 3 * M))
+  meth = factor(meth, levels = c("Multiplier", "Pair"))
+  type = rep(rep(c("Percentile", "Pivotal", "Normal"), each = M), 2)
+  rst = data.frame("width" = c(width1[, j], width3[, j]), "method" = meth, "type" = type)
   return (rst)
 }
+
 
 n = 1000
 p = n / 50
@@ -232,11 +252,11 @@ cover1 = cover_mb
 cover2 = cover_jack
 cover3 = cover_pair
 
-summ = getCoverPlot(cover1, cover2, cover3, p)
+summ = getCoverPlot(cover1, cover3, p)
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(summ, aes(x = method, y = cover, fill = type)) + 
-  geom_boxplot(alpha = 1, width = 1, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
   scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Coverage rate") + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20)) +
   theme(legend.position = "none")
@@ -250,11 +270,11 @@ width1 = width_mb
 width2 = width_jack
 width3 = width_pair
 
-summ = getWidthPlot(width1, width2, width3, 1, M)
+summ = getWidthPlot(width1, width3, 1, M)
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(summ, aes(x = method, y = width, fill = type)) + 
-  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
   scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("CI width") + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
 dev.off()
@@ -264,9 +284,9 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### time plot
-meth = c(rep("Multiplier", M), rep("Jackknife", M), rep("Pair", M))
-meth = factor(meth, levels = c("Multiplier", "Jackknife", "Pair"))
-rst = data.frame("time" = c(time[1, ], time[2, ], time[3, ]), "method" = meth)
+meth = c(rep("Multiplier", M), rep("Pair", M))
+meth = factor(meth, levels = c("Multiplier", "Pair"))
+rst = data.frame("time" = c(time[1, ], time[3, ]), "method" = meth)
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(rst, aes(x = method, y = time, fill = method)) + 
