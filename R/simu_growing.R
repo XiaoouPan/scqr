@@ -34,7 +34,7 @@ accuError = function(betahat, beta, tauSeq) {
 
 
 #### Growing dimension and sample size
-nseq = seq(1000, 10000, by = 1000)
+nseq = seq(1000, 20000, by = 1000)
 pseq = floor(nseq / 100)
 l = length(nseq)
 tauSeq = seq(0.05, 0.8, by = 0.05)
@@ -114,12 +114,21 @@ for (j in 1:l) {
 
 setwd("~/Dropbox/Conquer/SCQR/Code")
 coef = as.matrix(read.csv("Simulation/growing/coef_hetero.csv")[, -1])
+coef = cbind(coef, as.matrix(read.csv("Simulation/growing/coef_hetero_15.csv")[, -c(1, 2)]))
+coef = cbind(coef, as.matrix(read.csv("Simulation/growing/coef_hetero_18.csv")[, -1]))
+coef = cbind(coef, as.matrix(read.csv("Simulation/growing/coef_hetero_20.csv")[, -1]))
 coef1 = coef[1:500, ]
 coef2 = coef[501:1000, ]
 accu = as.matrix(read.csv("Simulation/growing/accu_hetero.csv")[, -1])
+accu = cbind(accu, as.matrix(read.csv("Simulation/growing/accu_hetero_15.csv")[, -c(1, 2)]))
+accu = cbind(accu, as.matrix(read.csv("Simulation/growing/accu_hetero_18.csv")[, -1]))
+accu = cbind(accu, as.matrix(read.csv("Simulation/growing/accu_hetero_20.csv")[, -1]))
 accu1 = accu[1:500, ]
 accu2 = accu[501:1000, ]
 time = as.matrix(read.csv("Simulation/growing/time_hetero.csv")[, -1])
+time = cbind(time, as.matrix(read.csv("Simulation/growing/time_hetero_15.csv")[, -c(1, 2)]))
+time = cbind(time, as.matrix(read.csv("Simulation/growing/time_hetero_18.csv")[, -1]))
+time = cbind(time, as.matrix(read.csv("Simulation/growing/time_hetero_20.csv")[, -1]))
 time1 = time[1:500, ]
 time2 = time[501:1000, ]
 
