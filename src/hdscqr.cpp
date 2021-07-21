@@ -620,6 +620,7 @@ arma::vec cvSqrScad(const arma::mat& X, arma::vec Y, const arma::vec& lambdaSeq,
   betaHat(0) += my - arma::as_scalar(mx * betaHat.rows(1, p));
   return betaHat;
 }
+
 // [[Rcpp::export]]
 arma::vec SqrMcp(const arma::mat& X, arma::vec Y, const double lambda, const double tau, const double h, const double phi0 = 0.01, 
                  const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
