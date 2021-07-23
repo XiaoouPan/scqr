@@ -76,7 +76,7 @@ double lossGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& 
                  const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
   arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
-  return arma::mean(censor % temp - accu);
+  return arma::mean(censor % temp - accu % Z * beta);
 }
 
 // [[Rcpp::export]]
@@ -86,7 +86,7 @@ double updateGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec
   arma::vec der = censor % arma::normcdf(res * h1) - accu;
   grad = n1 * Z.t() * der;
   arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
-  return arma::mean(temp);
+  return arma::mean(censor % temp - accu % Z * beta);
 }
 
 // LAMM, update beta, return phi
@@ -114,17 +114,17 @@ double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, a
 }
 
 // [[Rcpp::export]]
-double lammSq(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, arma::vec& beta, const double phi, const double tau, 
-              const double gamma, const int p, const double h, const double n1, const double h1, const double h2) {
+double lammSq(const arma::mat& Z, const arma::uvec& censor, const arma::vec& Y, const arma::vec& Lambda, const arma::vec& accu, arma::vec& beta, 
+              const double phi, const double tau, const double gamma, const int p, const double h, const double n1, const double h1, const double h2) {
   double phiNew = phi;
   arma::vec betaNew(p + 1);
   arma::vec grad(p + 1);
-  double loss = updateGauss(Z, Y, beta, grad, tau, n1, h, h1, h2);
+  double loss = updateGauss(Z, censor, Y, accu, beta, grad, tau, n1, h, h1, h2);
   while (true) {
     arma::vec first = beta - grad / phiNew;
     arma::vec second = Lambda / phiNew;
     betaNew = softThresh(first, second, p);
-    double fVal = lossGauss(Z, Y, betaNew, tau, h, h1, h2);
+    double fVal = lossGauss(Z, censor, Y, accu, betaNew, tau, h, h1, h2);
     arma::vec diff = betaNew - beta;
     double psiVal = loss + arma::as_scalar(grad.t() * diff) + 0.5 * phiNew * arma::as_scalar(diff.t() * diff);
     if (fVal <= psiVal) {
@@ -244,6 +244,7 @@ arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const
   return betaNew;
 }
 
+// SCQR-Lasso, SCAD and MCP with particular tau and lambda. This is not the function for the QR process.
 // [[Rcpp::export]]
 arma::vec sqrLasso(const arma::mat& Z, const arma::vec& Y, const double lambda, const arma::vec& sx1, const double tau, const int p, const double n1, 
                    const double h, const double h1, const double h2, const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, 
@@ -463,6 +464,7 @@ arma::vec sqrMcpIni(const arma::mat& Z, const arma::vec& Y, const double lambda,
   return betaNew;
 }
 
+//
 // [[Rcpp::export]]
 arma::vec SqrLasso(const arma::mat& X, arma::vec Y, const double lambda, const double tau, const double h, const double phi0 = 0.01, 
                    const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
