@@ -58,7 +58,6 @@ arma::vec cmptLambdaMCP(const arma::vec& beta, const double lambda, const arma::
   return rst;
 }
 
-// For l_2 loss, update gradient, return loss
 // [[Rcpp::export]]
 double lossL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, const double n1) {
   arma::vec res = Z * beta - Y;
@@ -72,17 +71,17 @@ double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, a
   return 0.5 * arma::mean(arma::square(res));
 }
 
-// For sqr loss, update gradient, return loss
 // [[Rcpp::export]]
-double lossGauss(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, const double tau, const double h, const double h1, const double h2) {
+double lossGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, const double tau, 
+                 const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
   arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
-  return arma::mean(temp);
+  return arma::mean(censor % temp + accu);
 }
 
 // [[Rcpp::export]]
-double updateGauss(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, arma::vec& grad, const double tau, const double n1, const double h, 
-                   const double h1, const double h2) {
+double updateGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, arma::vec& grad, 
+                   const double tau, const double n1, const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
   arma::vec der = arma::normcdf(res * h1) - tau;
   grad = n1 * Z.t() * der;
