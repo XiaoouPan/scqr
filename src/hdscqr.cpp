@@ -76,14 +76,14 @@ double lossGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& 
                  const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
   arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
-  return arma::mean(censor % temp + accu);
+  return arma::mean(censor % temp - accu);
 }
 
 // [[Rcpp::export]]
 double updateGauss(const arma::mat& Z, const arma::uvec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, arma::vec& grad, 
                    const double tau, const double n1, const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
-  arma::vec der = arma::normcdf(res * h1) - tau;
+  arma::vec der = censor % arma::normcdf(res * h1) - accu;
   grad = n1 * Z.t() * der;
   arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
   return arma::mean(temp);
