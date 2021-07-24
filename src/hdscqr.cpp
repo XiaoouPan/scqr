@@ -477,7 +477,7 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
 
 // SCQR process with a particular lambda
 // [[Rcpp::export]]
-arma::vec SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
+arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
                    const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols;
   const int m = tauSeq.size();
@@ -504,7 +504,7 @@ arma::vec SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
 }
 
 // [[Rcpp::export]]
-arma::vec cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, const arma::vec& tauSeq, 
+arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, const arma::vec& tauSeq, 
                      const int kfolds, const double h, const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, 
                      const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols, nlambda = lambdaSeq.size();
