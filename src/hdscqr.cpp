@@ -77,6 +77,19 @@ double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, a
 }
 
 // [[Rcpp::export]]
+double mtgRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const arma::vec& HSeq,
+              const int m, const double n1, const double h1) {
+  arma::vec res = Z * betaHat.col(m - 1) - Y;
+  arma::vec mtg = censor % arma::normcdf(h1 * res) - tauSeq(0);
+  for (int k = 0; k < m - 1; k++) {
+    res = Y - Z * betaHat.col(k);
+    mtg -= arma::normcdf(h1 * res) * (HSeq(k + 1) - HSeq(k));
+  }
+  arma::vec rst = n1 * Z.t() * mtg;
+  return arma::norm(rst, 2);
+}
+
+// [[Rcpp::export]]
 double lossGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, const double tau, 
                  const double h, const double h1, const double h2) {
   arma::vec res = Z * beta - Y;
@@ -527,7 +540,7 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
     arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
     arma::vec trainAccu = tauSeq(0) * (1 - trainCensor), testAccu = tauSeq(0) * (1 - testCensor);
     for (int i = 0; i < nlambda; i++) {
-      betaHat = sqr0Lasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+       betaHat = sqr0Lasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
       mse(i) += arma::accu(lossGauss(testZ, testCensor, testY, testAccu, betaHat, tauSeq(0), h, h1, h2));
     }
   }
@@ -547,8 +560,8 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
       arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
       arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
       arma::vec trainRes = trainY - trainZ * betaHat, testRes = testY - testZ * betaHat;
-      arma::vec trainAccu = accu + arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
-      arma::vec testAccu = accu + arma::normcdf(testRes * h1) * (HSeq(k) - HSeq(k - 1));
+      arma::vec trainAccu = accu.rows(idxComp) + arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
+      arma::vec testAccu = accu.rows(idx) + arma::normcdf(testRes * h1) * (HSeq(k) - HSeq(k - 1));
       for (int i = 0; i < nlambda; i++) {
         arma::vec trainBetaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         mse(i) += arma::accu(lossGauss(testZ, testCensor, testY, testAccu, trainBetaHat, tauSeq(k), h, h1, h2));
