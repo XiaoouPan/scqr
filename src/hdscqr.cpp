@@ -531,6 +531,8 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
   arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
   double my = arma::mean(Y);
   Y -= my;
+  arma::vec HSeq = getH(tauSeq);
+  mse = arma::zeros(nlambda);
   for (int j = 1; j <= kfolds; j++) {
     arma::uvec idx = arma::find(folds == j);
     arma::uvec idxComp = arma::find(folds != j);
@@ -538,36 +540,25 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
     arma::mat trainZ = Z.rows(idxComp), testZ = Z.rows(idx);
     arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
     arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
-    arma::vec trainAccu = tauSeq(0) * (1 - trainCensor), testAccu = tauSeq(0) * (1 - testCensor);
     for (int i = 0; i < nlambda; i++) {
-       betaHat = sqr0Lasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
-      mse(i) += arma::accu(lossGauss(testZ, testCensor, testY, testAccu, betaHat, tauSeq(0), h, h1, h2));
+      arma::vec trainAccu = tauSeq(0) * (1 - trainCensor);
+      betaHat = sqr0Lasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+      betaProc.col(0) = betaHat;
+      for (int k = 1; k < m; k++) {
+        arma::vec trainRes = trainY - trainZ * betaHat;
+        trainAccu += arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
+        betaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+        betaProc.col(k) =  betaHat;
+      }
+      mse(i) += mtgRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n1Train, h1);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
   arma::vec accu = tauSeq(0) * (1 - censor);
   betaHat = sqr0Lasso(Z, censor, Y, lambdaSeq(cvIdx), accu, sx1, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
-  arma::vec res = Y - Z * betaHat;
-  arma::vec HSeq = getH(tauSeq);
   for (int k = 1; k < m; k++) {
-    mse = arma::zeros(nlambda);
-    for (int j = 1; j <= kfolds; j++) {
-      arma::uvec idx = arma::find(folds == j);
-      arma::uvec idxComp = arma::find(folds != j);
-      double n1Train = 1.0 / idxComp.size();
-      arma::mat trainZ = Z.rows(idxComp), testZ = Z.rows(idx);
-      arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
-      arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
-      arma::vec trainRes = trainY - trainZ * betaHat, testRes = testY - testZ * betaHat;
-      arma::vec trainAccu = accu.rows(idxComp) + arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
-      arma::vec testAccu = accu.rows(idx) + arma::normcdf(testRes * h1) * (HSeq(k) - HSeq(k - 1));
-      for (int i = 0; i < nlambda; i++) {
-        arma::vec trainBetaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
-        mse(i) += arma::accu(lossGauss(testZ, testCensor, testY, testAccu, trainBetaHat, tauSeq(k), h, h1, h2));
-      }
-    }
-    cvIdx = arma::index_min(mse);
+    arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
     betaHat = sqrkLasso(Z, censor, Y, lambdaSeq(cvIdx), accu, sx1, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
@@ -576,6 +567,7 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
   return betaProc;
 }
+
 
 /*// [[Rcpp::export]]
 arma::vec SqrScad(const arma::mat& X, arma::vec Y, const double lambda, const double tau, const double h, const double phi0 = 0.01, 
