@@ -1,8 +1,4 @@
 ###### Simulation code for scqr
-
-rm(list = ls())
-Rcpp::sourceCpp("src/hdscqr.cpp")
-
 library(quantreg)
 library(MASS)
 library(MultiRNG)
@@ -12,6 +8,10 @@ library(tikzDevice)
 library(ggplot2)
 library(glmnet)
 library(caret)
+
+rm(list = ls())
+Rcpp::sourceCpp("src/hdscqr.cpp")
+
 
 getSigma = function(p) {
   sig = diag(p)
@@ -23,34 +23,43 @@ getSigma = function(p) {
   return (sig)
 }
 
-exam = function(beta, beta.hat) {
+exam = function(beta, beta.hat, beta.oracle) {
   m = ncol(beta)
   TPR = TNR = PPV = err = rep(0, m)
   for (i in 1:m) {
-    TPR[i] = sum(beta[, i] != 0 & beta.hat[, i] != 0) / sum(beta[, i] != 0)
-    TNR[i] = sum(beta[, i] == 0 & beta.hat[, i] == 0) / sum(beta[, i] == 0)
-    PPV[i] = sum(beta[, i] != 0 & beta.hat[, i] != 0) / sum(beta.hat[, i] != 0)
-    err[i] = norm(beta[, i] - beta.hat[, i], "2")
+    TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
+    TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
+    PPV[i] = 0
+    if (sum(beta.hat[-1, i] != 0) > 0) {
+      PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
+    }
+    err[i] = norm(beta[-1, i] - beta.hat[-1, i], "2")
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "error" = err))
+  tt = ncol(beta.oracle)
+  RE = rep(0, tt)
+  for (i in 1:tt) {
+    err.ora = norm(beta[-1, i] - beta.oracle[-1, i], "2")
+    RE[i] = err[i] / err.ora
+  }
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "error" = err, "RE" = RE))
 }
 
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 50
-p = 100
-s = 2
+n = 200
+p = 500
+s = 10
 M = 1
 kfolds = 5
-tauSeq = seq(0.05, 0.8, by = 0.05)
-grid = seq(0.05, 0.85, by = 0.05)
+tauSeq = seq(0.2, 0.8, by = 0.05)
+m = length(tauSeq)
+grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 
-time = matrix(0, 3, M)
-prop = rep(0, M)
-h = (s * sqrt(log(p) / n) + (s * log(p) / n)^(0.25)) / 2
+time = prop = rep(0, M)
+TPR = TNR = PPV = error = RE = matrix(0, m, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -77,21 +86,53 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
+  ## Peng and Huang on the oracle set
+  list = crq(response ~ X[, which(beta != 0)], method = "PengHuang", grid = grid)
+  beta.oracle = list$sol[2:(s + 2), ]
+  tt = ncol(beta.oracle)
+  beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
+  
   folds = createFolds(Y, kfolds, FALSE)
   fit = cv.glmnet(X, Y, nlambda = 50)
   lambdaSeq = fit$lambda
+  s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
+  h = (s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2
   
   ## SCQR-Lasso
   start = Sys.time()
-  betaHat = SqrLasso(X, censor, Y, lambda = 0.1, tauSeq, h)
+  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
-  time[1, i] = as.numeric(difftime(end, start, units = "secs"))
-  
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  test = exam(betaMat, beta.lasso, beta.oracle)
+  TPR[, i] = test$TPR
+  TNR[, i] = test$TNR
+  PPV[, i] = test$PPV
+  error[, i] = test$error
+  RE[, i] = test$RE
   
   ## SCQR-SCAD
+  start = Sys.time()
+  beta.scad = cvSqrScad(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  test = exam(betaMat, beta.scad, beta.oracle)
+  TPR[, i] = test$TPR
+  TNR[, i] = test$TNR
+  PPV[, i] = test$PPV
+  error[, i] = test$error
+  RE[, i] = test$RE
   
   ## SCQR-MCP
-  
+  start = Sys.time()
+  beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  test = exam(betaMat, beta.mcp, beta.oracle)
+  TPR[, i] = test$TPR
+  TNR[, i] = test$TNR
+  PPV[, i] = test$PPV
+  error[, i] = test$error
+  RE[, i] = test$RE
   
   setTxtProgressBar(pb, i / M)
 }
