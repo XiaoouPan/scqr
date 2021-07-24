@@ -10,6 +10,8 @@ library(matrixStats)
 library(survival)
 library(tikzDevice)
 library(ggplot2)
+library(glmnet)
+library(caret)
 
 getSigma = function(p) {
   sig = diag(p)
@@ -21,39 +23,53 @@ getSigma = function(p) {
   return (sig)
 }
 
+exam = function(beta, beta.hat) {
+  m = ncol(beta)
+  TPR = TNR = PPV = err = rep(0, m)
+  for (i in 1:m) {
+    TPR[i] = sum(beta[, i] != 0 & beta.hat[, i] != 0) / sum(beta[, i] != 0)
+    TNR[i] = sum(beta[, i] == 0 & beta.hat[, i] == 0) / sum(beta[, i] == 0)
+    PPV[i] = sum(beta[, i] != 0 & beta.hat[, i] != 0) / sum(beta.hat[, i] != 0)
+    err[i] = norm(beta[, i] - beta.hat[, i], "2")
+  }
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "error" = err))
+}
+
+
 
 #### Quantile process with fixed scale, hard to visualize
-n = 5000
-p = n / 50
-M = 500
+n = 50
+p = 100
+s = 2
+M = 1
+kfolds = 5
 tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-coef1 = eff1 = matrix(0, M, nTau)
-coef2 = eff2 = matrix(0, M, nTau)
-coef3 = eff3 = matrix(0, M, nTau)
+
 time = matrix(0, 3, M)
 prop = rep(0, M)
+h = (s * sqrt(log(p) / n) + (s * log(p) / n)^(0.25)) / 2
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
   #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
-  #Sigma = getSigma(p)
-  #X = mvrnorm(n, rep(0, p), Sigma)
-  Sigma = getSigma(45)
-  X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
+  Sigma = getSigma(p)
+  X = mvrnorm(n, rep(0, p), Sigma)
+  #Sigma = getSigma(45)
+  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
-  #beta = runif(p, -2, 2)
-  #betaMat = rbind(beta0, matrix(beta, p, nTau))
-  #logT = X %*% beta + err
+  beta = c(runif(s, 2, 3), rep(0, p - s))
+  betaMat = rbind(beta0, matrix(beta, p, nTau))
+  logT = X %*% beta + err
   ## Hetero
-  X[, 1] = abs(X[, 1])
-  beta = runif(p - 1, -2, 2)
-  betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-  logT = X[, 1] * err + X[, -1] %*% beta
+  #X[, 1] = abs(X[, 1])
+  #beta = runif(p - 1, -2, 2)
+  #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
+  #logT = X[, 1] * err + X[, -1] %*% beta
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
@@ -61,33 +77,24 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   
-  ## Smoothed CQR
+  folds = createFolds(Y, kfolds, FALSE)
+  fit = cv.glmnet(X, Y, nlambda = 50)
+  lambdaSeq = fit$lambda
+  
+  ## SCQR-Lasso
   start = Sys.time()
-  list = scqrGauss(X, Y, censor, tauSeq)
+  betaHat = SqrLasso(X, censor, Y, lambda = 0.1, tauSeq, h)
   end = Sys.time()
   time[1, i] = as.numeric(difftime(end, start, units = "secs"))
-  coef1[i, ] = sqrt(colSums((list$coeff - betaMat)^2))
-  #eff1[i, ] = list$coeff[1, ]
-  eff1[i, ] = list$coeff[2, ]
   
-  ## Peng and Huang
-  start = Sys.time()
-  list = crq(response ~ X, method = "PengHuang", grid = grid)
-  end = Sys.time()
-  time[2, i] = as.numeric(difftime(end, start, units = "secs"))
-  tt = ncol(list$sol)
-  coef2[i, 1:tt] = sqrt(colSums((list$sol[2:(p + 2), ] - betaMat[, 1:tt])^2))
-  #eff2[i, 1:tt] = list$sol[2, ]
-  eff2[i, 1:tt] = list$sol[3, ]
+  
+  ## SCQR-SCAD
+  
+  ## SCQR-MCP
+  
   
   setTxtProgressBar(pb, i / M)
 }
-
-
-setwd("~/Dropbox/Conquer/censoredQR/Code")
-write.csv(time, "Simulation/time_hetero.csv")
-write.csv(rbind(coef1, coef2, coef3), "Simulation/coef_hetro.csv")
-write.csv(rbind(eff1, eff2, eff3), "Simulation/eff_hetero.csv")
 
 
 
