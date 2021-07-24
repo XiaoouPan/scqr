@@ -500,7 +500,7 @@ arma::vec SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
   }
   betaProc.rows(1, p).each_col() %= sx1;
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return betaHat;
+  return betaProc;
 }
 
 // [[Rcpp::export]]
@@ -561,7 +561,7 @@ arma::vec cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
   }
   betaProc.rows(1, p).each_col() %= sx1;
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return betaHat;
+  return betaProc;
 }
 
 /*// [[Rcpp::export]]
