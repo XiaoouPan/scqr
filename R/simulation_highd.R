@@ -21,17 +21,6 @@ getSigma = function(p) {
   return (sig)
 }
 
-estError = function(betahat, beta, tauSeq) {
-  nTau = min(length(tauSeq), ncol(betahat) + 1)
-  diff = betahat - beta
-  err = sqrt(colSums((betahat - beta)^2))
-  accu = 0
-  for (k in 2:nTau) {
-    accu = accu + err[k - 1] * (tauSeq[k] - tauSeq[k - 1])
-  }
-  return (accu)
-}
-
 
 #### Quantile process with fixed scale, hard to visualize
 n = 5000
@@ -91,15 +80,6 @@ for (i in 1:M) {
   #eff2[i, 1:tt] = list$sol[2, ]
   eff2[i, 1:tt] = list$sol[3, ]
   
-  ## Portnoy
-  start = Sys.time()
-  list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
-  end = Sys.time()
-  time[3, i] = as.numeric(difftime(end, start, units = "secs"))
-  coef3[i, ] = sqrt(colSums((list$sol[2:(p + 2), 2:17] - betaMat)^2))
-  #eff3[i, ] = list$sol[2, 2:17]
-  eff3[i, ] = list$sol[3, 2:17]
-  
   setTxtProgressBar(pb, i / M)
 }
 
@@ -109,16 +89,6 @@ write.csv(time, "Simulation/time_hetero.csv")
 write.csv(rbind(coef1, coef2, coef3), "Simulation/coef_hetro.csv")
 write.csv(rbind(eff1, eff2, eff3), "Simulation/eff_hetero.csv")
 
-
-## Check corner cases
-rowMeans(time)
-index = which(coef2[, nTau - 1] == 0)
-coef1 = coef1[-index, ]
-coef2 = coef2[-index, ]
-coef3 = coef3[-index, ]
-eff1 = eff1[-index, ]
-eff2 = eff2[-index, ]
-eff3 = eff3[-index, ]
 
 
 
