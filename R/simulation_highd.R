@@ -140,7 +140,7 @@ for (i in 1:M) {
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero")
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
 mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
 mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
@@ -236,8 +236,8 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Box plots
-tau = 13
-rst1 = c(mtc.lasso[ind4, ][3, ], mtc.scad[ind4, ][3, ], mtc.mcp[ind4, ][3, ])
+iii = 3
+rst1 = c(mtc.lasso[ind4, ][iii, ], mtc.scad[ind4, ][iii, ], mtc.mcp[ind4, ][iii, ])
 meth = c(rep("\\texttt{Lasso}", M), rep("\\texttt{SCAD}", M), rep("\\texttt{MCP}", M))
 meth = factor(meth, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
 dat = data.frame("est" = rst1, "method" = meth)
