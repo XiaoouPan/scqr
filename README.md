@@ -9,6 +9,7 @@ In the low dimensional regime, the regression process is formulated as solving a
 Coordinatewise confidence intervals of coefficients can be constructed by multiplier bootstrap.
 In the high dimensional regime, the sparse learning problem is solved by iteratively reweighted *&ell;<sub>1</sub>*-regularized regression, and each *&ell;<sub>1</sub>*-regularized regression is solved by a local MM algorithm.
 
+
 ## References
 
 He, X., Pan, X., Tan, K. M., and Zhou, W.-X. (2020). Smoothed quantile regression with large-scale inference. [Paper](https://www.math.ucsd.edu/~xip024/Papers/sqr_main.pdf)
