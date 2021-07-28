@@ -48,9 +48,9 @@ exam = function(beta, beta.hat, beta.oracle) {
 
 #### Quantile process with fixed scale, hard to visualize
 n = 200
-p = 500
+p = 1000
 s = 10
-M = 500
+M = 50
 kfolds = 5
 tauSeq = seq(0.2, 0.8, by = 0.05)
 m = length(tauSeq)
@@ -140,7 +140,7 @@ for (i in 1:M) {
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero")
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
 mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
 mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
