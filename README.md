@@ -22,3 +22,5 @@ Peng, L. and Huang, Y. (2008). Survival analysis with quantile regression models
 
 Sanderson, C. and Curtin, R. (2016). Armadillo: A template-based C++ library for linear algebra. *J. Open Source Softw.* **1** 26. [Paper](https://joss.theoj.org/papers/10.21105/joss.00026.pdf)
 
+Zheng, Q., Peng, L. and He, X. (2018). High dimensional censored quantile regression. *Ann. Statist.* **46** 308-343. [Paper](https://doi.org/10.1214/17-AOS1551)
+
