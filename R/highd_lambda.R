@@ -23,20 +23,28 @@ getSigma = function(p) {
   return (sig)
 }
 
-exam = function(beta, beta.hat, ) {
+exam = function(beta, beta.hat, HSeq) {
   m = ncol(beta)
-  err = rep(0, m)
-  for (i in 1:m) {
-    err[i] = norm(beta[-1, i] - beta.hat[-1, i], "2")
+  err = 0
+  for (i in 1:(m - 1)) {
+    err = err + norm(beta[-1, i] - beta.hat[-1, i], "2") * (HSeq[i + 1] - HSeq[i])
   }
   return (err)
 }
 
+calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
+  m = ncol(beta.hat)
+  res = censor * (Y <= (beta.hat[1, m] + X %*% beta.hat[-1, m])) - tauSeq[1]
+  for (i in 1:(m - 1)) {
+    res = res - (Y >= (beta.hat[1, i] + X %*% beta.hat[-1, i])) * (HSeq[i + 1] - HSeq[i])
+  }
+  return (mean(res^2))
+}
 
 
 #### Quantile process with fixed scale, hard to visualize
 n = 400
-p = 500
+p = 200
 s = 10
 M = 50
 kfolds = 5
@@ -45,9 +53,9 @@ m = length(tauSeq)
 grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.05), log(5), length.out = 50))
-H = as.numeric(getH(tauSeq))
-error = matrix(0, 50, M)
+lambdaSeq = exp(seq(log(0.001), log(4), length.out = 50))
+HSeq = as.numeric(getH(tauSeq))
+error = res = matrix(0, 50, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -71,27 +79,28 @@ for (i in 1:M) {
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
   Y = pmin(logT, logC)
-  response = Surv(Y, censor, type = "right")
   
   folds = createFolds(censor, kfolds, FALSE)
   fit = cv.glmnet(X, Y, nlambda = 50)
   s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
   h = (s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2
   
-  ## SCQR-Lasso
-  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  test = exam(betaMat, beta.lasso, beta.oracle)
-  error[, i] = test$error
-  
-  ## SCQR-SCAD
-  beta.scad = cvSqrScad(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  test = exam(betaMat, beta.scad, beta.oracle)
-  error[, i] = test$error
-  
-  ## SCQR-MCP
-  beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  test = exam(betaMat, beta.mcp, beta.oracle)
-  error[, i] = test$error
+  for (j in 1:50) {
+    ## SCQR-Lasso
+    beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.lasso, HSeq)
+    res[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq)
+    
+    ## SCQR-SCAD
+    beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.scad, HSeq)
+    res[j, i] = calRes(X, censor, Y, beta.scad, tauSeq, HSeq)
+    
+    ## SCQR-MCP
+    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.mcp, HSeq)
+    res[j, i] = calRes(X, censor, Y, beta.mcp, tauSeq, HSeq)
+  }
   
   setTxtProgressBar(pb, i / M)
 }
