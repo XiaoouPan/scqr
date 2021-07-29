@@ -53,7 +53,7 @@ m = length(tauSeq)
 grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.001), log(4), length.out = 50))
+lambdaSeq = exp(seq(log(0.05), log(5), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
 error = res = matrix(0, 50, M)
 
@@ -109,78 +109,31 @@ for (i in 1:M) {
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
-mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
-mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
-mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
+mtc.lasso = as.matrix(read.csv("lam_lasso.csv")[, -1])
+mtc.scad = as.matrix(read.csv("lam_scad.csv")[, -1])
+mtc.mcp = as.matrix(read.csv("lam_mcp.csv")[, -1])
 
-ind1 = 1:13
-ind2 = 14:26
-ind3 = 27:39
-ind4 = 40:52
-ind5 = 53:65
+ind1 = 1:50
+ind2 = 51:100
 
 ### Dataframe construction
-TPR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
-TNR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind2], rowMeans(mtc.scad, na.rm = TRUE)[ind2], rowMeans(mtc.mcp, na.rm = TRUE)[ind2])
-PPV = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind3], rowMeans(mtc.scad, na.rm = TRUE)[ind3], rowMeans(mtc.mcp, na.rm = TRUE)[ind3])
-error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind4], rowMeans(mtc.scad, na.rm = TRUE)[ind4], rowMeans(mtc.mcp, na.rm = TRUE)[ind4])
-RE = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind5], rowMeans(mtc.scad, na.rm = TRUE)[ind5], rowMeans(mtc.mcp, na.rm = TRUE)[ind5])
-dat = as.data.frame(cbind(TPR, TNR, PPV, error, RE))
-colnames(dat) = c("TPR", "TNR", "PPV", "error", "RE")
-dat$tau = rep(tauSeq, 3)
-dat$type = c(rep("\\texttt{Lasso}", nTau), rep("\\texttt{SCAD}", nTau), rep("\\texttt{MCP}", nTau))
+error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
+res = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind2], rowMeans(mtc.scad, na.rm = TRUE)[ind2], rowMeans(mtc.mcp, na.rm = TRUE)[ind2])
+dat = as.data.frame(cbind(error, res))
+colnames(dat) = c("error", "res")
+dat$lambda = rep(lambdaSeq, 3)
+dat$type = c(rep("\\texttt{Lasso}", 50), rep("\\texttt{SCAD}", 50), rep("\\texttt{MCP}", 50))
 dat$type = factor(dat$type, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
 
-### TPR
+
+## error
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = TPR)) +
-  geom_line(aes(y = TPR, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("True positive rate") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-##TNR
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = TNR)) +
-  geom_line(aes(y = TNR, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("True negative rate") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-## PPV
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = PPV)) +
-  geom_line(aes(y = PPV, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Precision") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-## error, not good
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = error)) +
+ggplot(dat, aes(x = lambda, y = error)) +
   geom_line(aes(y = error, color = type, linetype = type), size = 3) + 
   scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("$\\ell_2$ error") +
+  theme_bw() + xlab("$\\lambda$") + ylab("$Global error") +
   #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
   theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
@@ -188,13 +141,13 @@ ggplot(dat, aes(x = tau, y = error)) +
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
-## RE, not good
+## Martingale residual
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = RE)) +
-  geom_line(aes(y = RE, color = type, linetype = type), size = 3) + 
+ggplot(dat, aes(x = lambda, y = res)) +
+  geom_line(aes(y = res, color = type, linetype = type), size = 3) + 
   scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Relative error") +
+  theme_bw() + xlab("$\\lambda$") + ylab("Martingale residual") +
   #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
   theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
