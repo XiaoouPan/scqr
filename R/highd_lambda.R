@@ -116,14 +116,14 @@ for (i in 1:M) {
   
   for (j in 1:50) {
     ## SCQR-Lasso
-    beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.lasso, HSeq)
-    res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
+    #beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error[j, i] = exam(betaMat, beta.lasso, HSeq)
+    #res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
     
     ## SCQR-SCAD
-    #beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    #error[j, i] = exam(betaMat, beta.scad, HSeq)
-    #res[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
+    beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.scad, HSeq)
+    res[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
     
     ## SCQR-MCP
     #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
