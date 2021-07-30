@@ -61,16 +61,16 @@ calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
 
 #### Quantile process with fixed scale, hard to visualize
 n = 400
-p = 1000
+p = 300
 s = 10
-M = 5
+M = 1
 kfolds = 5
-tauSeq = seq(0.2, 0.8, by = 0.05)
+tauSeq = seq(0.2, 0.7, by = 0.02)
 m = length(tauSeq)
-grid = seq(0.2, 0.85, by = 0.05)
+grid = seq(0.2, 0.72, by = 0.02)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.02), log(0.2), length.out = 50))
+lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
 error = res = matrix(0, 50, M)
 
@@ -125,6 +125,8 @@ for (i in 1:M) {
 
 rowMeans(error)
 rowMeans(res)
+plot(rowMeans(error), type = "l")
+plot(rowMeans(res), type = "l")
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
