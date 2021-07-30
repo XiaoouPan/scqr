@@ -341,7 +341,7 @@ arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 50) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -385,7 +385,7 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 50) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -432,7 +432,7 @@ arma::vec sqr0Mcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 50) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -476,7 +476,7 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 50) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
