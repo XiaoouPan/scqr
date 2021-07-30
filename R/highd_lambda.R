@@ -175,7 +175,7 @@ ggplot(dat, aes(x = lambda, y = error)) +
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
-## Martingale residual
+## residual
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = lambda, y = res)) +
   geom_line(aes(y = res, color = type, linetype = type), size = 3) + 
