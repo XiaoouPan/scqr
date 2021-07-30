@@ -25,17 +25,18 @@ getSigma = function(p) {
 
 metric = function(beta, beta.hat) {
   m = ncol(beta)
-  TPR = TNR = PPV = err = rep(0, m)
+  TPR = TNR = PPV = FDR = rep(0, m)
   for (i in 1:m) {
     TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
     TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
     PPV[i] = 0
+    FDR[i] = 0
     if (sum(beta.hat[-1, i] != 0) > 0) {
       PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
+      FDR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
     }
-    err[i] = norm(beta[-1, i] - beta.hat[-1, i], "2")
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "error" = err))
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR))
 }
 
 
@@ -57,30 +58,19 @@ calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
   return (mean(res^2))
 }
 
-calDev = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
-  m = ncol(beta.hat)
-  res = censor * (Y <= (beta.hat[1, m] + X %*% beta.hat[-1, m])) - tauSeq[1]
-  for (i in 1:(m - 1)) {
-    res = res - (Y >= (beta.hat[1, i] + X %*% beta.hat[-1, i])) * (HSeq[i + 1] - HSeq[i])
-  }
-  dev = (res > 0) * sqrt(-2 * (res + censor) * log(censor - res))
-  return (mean(dev))
-}
-
-
 
 #### Quantile process with fixed scale, hard to visualize
 n = 400
-p = 200
+p = 1000
 s = 10
-M = 10
+M = 5
 kfolds = 5
 tauSeq = seq(0.2, 0.8, by = 0.05)
 m = length(tauSeq)
 grid = seq(0.2, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.001), log(1), length.out = 50))
+lambdaSeq = exp(seq(log(0.02), log(0.2), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
 error = res = matrix(0, 50, M)
 
@@ -119,20 +109,22 @@ for (i in 1:M) {
     res[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq)
     
     ## SCQR-SCAD
-    beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.scad, HSeq)
-    res[j, i] = calRes(X, censor, Y, beta.scad, tauSeq, HSeq)
+    #beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error[j, i] = exam(betaMat, beta.scad, HSeq)
+    #res[j, i] = calRes(X, censor, Y, beta.scad, tauSeq, HSeq)
     
     ## SCQR-MCP
-    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.mcp, HSeq)
-    res[j, i] = calRes(X, censor, Y, beta.mcp, tauSeq, HSeq)
+    #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error[j, i] = exam(betaMat, beta.mcp, HSeq)
+    #res[j, i] = calRes(X, censor, Y, beta.mcp, tauSeq, HSeq)
     
-    setTxtProgressBar(pb, (j + (i - 1) * M) / (50 * M))
+    setTxtProgressBar(pb, (j + (i - 1) * 50) / (50 * M))
   }
 }
 
 
+rowMeans(error)
+rowMeans(res)
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
