@@ -68,7 +68,7 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
     temp = res.cen * (tauSeq[i] - (res.cen < 0))
     res = res + mean(temp)
   }
-  return (res)
+  return (res / m)
 }
 
 
@@ -146,6 +146,7 @@ mtc.lasso = as.matrix(read.csv("lam_lasso.csv")[, -1])
 mtc.scad = as.matrix(read.csv("lam_scad.csv")[, -1])
 mtc.mcp = as.matrix(read.csv("lam_mcp.csv")[, -1])
 
+lambdaSeq = exp(seq(log(0.02), log(0.2), length.out = 50))
 ind1 = 1:50
 ind2 = 51:100
 
