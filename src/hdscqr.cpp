@@ -120,17 +120,17 @@ double updateGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec&
 
 // LAMM, update beta, return phi
 // [[Rcpp::export]]
-double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, arma::vec& beta, const double phi, const double gamma, const int p, 
-              const double n1) {
+double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, arma::vec& beta, const double tau, const double phi, const double gamma, 
+              const int p, const double n1) {
   double phiNew = phi;
   arma::vec betaNew(p + 1);
   arma::vec grad(p + 1);
-  double loss = updateL2(Z, Y, beta, grad, n1);
+  double loss = updateL2(Z, Y, beta, grad, n1, tau);
   while (true) {
     arma::vec first = beta - grad / phiNew;
     arma::vec second = Lambda / phiNew;
     betaNew = softThresh(first, second, p);
-    double fVal = lossL2(Z, Y, betaNew, n1);
+    double fVal = lossL2(Z, Y, betaNew, n1, tau);
     arma::vec diff = betaNew - beta;
     double psiVal = loss + arma::as_scalar(grad.t() * diff) + 0.5 * phiNew * arma::as_scalar(diff.t() * diff);
     if (fVal <= psiVal) {
@@ -166,7 +166,7 @@ double lammSq(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, c
 }
 
 // [[Rcpp::export]]
-arma::vec lasso(const arma::mat& Z, const arma::vec& Y, const double lambda, const arma::vec& sx1, const int p, const double n1, 
+arma::vec lasso(const arma::mat& Z, const arma::vec& Y, const double lambda, const double tau, const arma::vec& sx1, const int p, const double n1, 
                 const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   arma::vec beta = arma::zeros(p + 1);
   arma::vec betaNew = arma::zeros(p + 1);
@@ -175,7 +175,7 @@ arma::vec lasso(const arma::mat& Z, const arma::vec& Y, const double lambda, con
   int ite = 0;
   while (ite <= iteMax) {
     ite++;
-    phi = lammL2(Z, Y, Lambda, betaNew, phi, gamma, p, n1);
+    phi = lammL2(Z, Y, Lambda, betaNew, tau, phi, gamma, p, n1);
     phi = std::max(phi0, phi / gamma);
     if (arma::norm(betaNew - beta, "inf") <= epsilon) {
       break;
@@ -186,7 +186,7 @@ arma::vec lasso(const arma::mat& Z, const arma::vec& Y, const double lambda, con
 }
 
 // [[Rcpp::export]]
-arma::vec scad(const arma::mat& Z, const arma::vec& Y, const double lambda, const arma::vec& sx1, const int p, const double n1, 
+arma::vec scad(const arma::mat& Z, const arma::vec& Y, const double lambda, const double tau, const arma::vec& sx1, const int p, const double n1, 
                const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   arma::vec beta = arma::zeros(p + 1);
   arma::vec betaNew = arma::zeros(p + 1);
@@ -196,7 +196,7 @@ arma::vec scad(const arma::mat& Z, const arma::vec& Y, const double lambda, cons
   int ite = 0;
   while (ite <= iteMax) {
     ite++;
-    phi = lammL2(Z, Y, Lambda, betaNew, phi, gamma, p, n1);
+    phi = lammL2(Z, Y, Lambda, betaNew, tau, phi, gamma, p, n1);
     phi = std::max(phi0, phi / gamma);
     if (arma::norm(betaNew - beta, "inf") <= epsilon) {
       break;
@@ -215,7 +215,7 @@ arma::vec scad(const arma::mat& Z, const arma::vec& Y, const double lambda, cons
     ite = 0;
     while (ite <= iteMax) {
       ite++;
-      phi = lammL2(Z, Y, Lambda, betaNew, phi, gamma, p, n1);
+      phi = lammL2(Z, Y, Lambda, betaNew, tau, phi, gamma, p, n1);
       phi = std::max(phi0, phi / gamma);
       if (arma::norm(betaNew - beta, "inf") <= epsilon) {
         break;
@@ -230,7 +230,7 @@ arma::vec scad(const arma::mat& Z, const arma::vec& Y, const double lambda, cons
 }
 
 // [[Rcpp::export]]
-arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const arma::vec& sx1, const int p, const double n1, 
+arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const double tau, const arma::vec& sx1, const int p, const double n1, 
               const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   arma::vec beta = arma::zeros(p + 1);
   arma::vec betaNew = arma::zeros(p + 1);
@@ -240,7 +240,7 @@ arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const
   int ite = 0;
   while (ite <= iteMax) {
     ite++;
-    phi = lammL2(Z, Y, Lambda, betaNew, phi, gamma, p, n1);
+    phi = lammL2(Z, Y, Lambda, betaNew, tau, phi, gamma, p, n1);
     phi = std::max(phi0, phi / gamma);
     if (arma::norm(betaNew - beta, "inf") <= epsilon) {
       break;
@@ -259,7 +259,7 @@ arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const
     ite = 0;
     while (ite <= iteMax) {
       ite++;
-      phi = lammL2(Z, Y, Lambda, betaNew, phi, gamma, p, n1);
+      phi = lammL2(Z, Y, Lambda, betaNew, tau, phi, gamma, p, n1);
       phi = std::max(phi0, phi / gamma);
       if (arma::norm(betaNew - beta, "inf") <= epsilon) {
         break;
@@ -278,7 +278,7 @@ arma::vec mcp(const arma::mat& Z, const arma::vec& Y, const double lambda, const
 arma::vec sqr0Lasso(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const double lambda, const arma::vec& accu, const arma::vec& sx1, 
                     const double tau, const int p, const double n1, const double h, const double h1, const double h2, const double phi0 = 0.01, 
                     const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
-  arma::vec beta = lasso(Z, Y, lambda, sx1, p, n1, phi0, gamma, epsilon, iteMax);
+  arma::vec beta = lasso(Z, Y, lambda, tau, sx1, p, n1, phi0, gamma, epsilon, iteMax);
   arma::vec quant = {tau};
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
@@ -321,7 +321,7 @@ arma::vec sqrkLasso(const arma::mat& Z, const arma::vec& censor, const arma::vec
 arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const double lambda, const arma::vec& accu, const arma::vec& sx1, 
                    const double tau, const int p, const double n1, const double h, const double h1, const double h2, const double phi0 = 0.01, 
                    const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
-  arma::vec beta = lasso(Z, Y, lambda, sx1, p, n1, phi0, gamma, epsilon, iteMax);
+  arma::vec beta = lasso(Z, Y, lambda, tau, sx1, p, n1, phi0, gamma, epsilon, iteMax);
   arma::vec quant = {tau};
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
@@ -412,7 +412,7 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
 arma::vec sqr0Mcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const double lambda, const arma::vec& accu, const arma::vec& sx1, 
                   const double tau, const int p, const double n1, const double h, const double h1, const double h2, const double phi0 = 0.01, 
                   const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
-  arma::vec beta = lasso(Z, Y, lambda, sx1, p, n1, phi0, gamma, epsilon, iteMax);
+  arma::vec beta = lasso(Z, Y, lambda, tau, sx1, p, n1, phi0, gamma, epsilon, iteMax);
   arma::vec quant = {tau};
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
