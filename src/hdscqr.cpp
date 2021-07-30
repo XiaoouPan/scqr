@@ -566,7 +566,7 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
         betaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += mtgRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n1Train, h1);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
@@ -646,7 +646,7 @@ arma::mat cvSqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, co
         betaHat = sqrkScad(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += mtgRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n1Train, h1);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
@@ -726,7 +726,7 @@ arma::mat cvSqrMcp(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
         betaHat = sqrkMcp(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, sx1, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += mtgRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n1Train, h1);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
