@@ -63,7 +63,7 @@ calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
 n = 400
 p = 300
 s = 10
-M = 1
+M = 10
 kfolds = 5
 tauSeq = seq(0.2, 0.7, by = 0.02)
 m = length(tauSeq)
@@ -125,7 +125,7 @@ for (i in 1:M) {
 
 rowMeans(error)
 rowMeans(res)
-plot(rowMeans(error), type = "l")
+plot(rowMeans(error)[-48], type = "l")
 plot(rowMeans(res), type = "l")
 
 
