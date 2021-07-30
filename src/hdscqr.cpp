@@ -88,16 +88,21 @@ double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, a
 }
 
 // [[Rcpp::export]]
-double mtgRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const arma::vec& HSeq,
-              const int m, const double n1, const double h1) {
-  arma::vec res = Z * betaHat.col(m - 1) - Y;
-  arma::vec mtg = censor % arma::normcdf(h1 * res) - tauSeq(0);
-  for (int k = 0; k < m - 1; k++) {
-    res = Y - Z * betaHat.col(k);
-    mtg -= arma::normcdf(h1 * res) * (HSeq(k + 1) - HSeq(k));
+double calRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const int m) {
+  double res = 0.0;
+  arma::uvec idx = arma::find(censor == 1);
+  arma::mat Zcen = Z.rows(idx);
+  arma::mat Ycen = Y.rows(idx);
+  int ncen = Ycen.size();
+  for (int k = 0; k < m; k++) {
+    arma::vec resCen = Ycen - Zcen * betaHat.col(k);
+    double temp = 0.0;
+    for (int i = 0; i < ncen; i++) {
+      temp += resCen(i) >= 0 ? (resCen(i) * tauSeq(k)) : (resCen(i) * (tauSeq(k) - 1));
+    }
+    res += temp / ncen;
   }
-  arma::vec rst = n1 * Z.t() * mtg;
-  return arma::norm(rst, 2);
+  return res / m;
 }
 
 // [[Rcpp::export]]
