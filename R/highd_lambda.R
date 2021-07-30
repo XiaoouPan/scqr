@@ -64,7 +64,7 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
   X.cen = X[which(censor == 1), ]
   Y.cen = Y[which(censor == 1)]
   for (i in 1:m) {
-    res.cen = Y.cen - beta.hat[1, m] - X.cen %*% beta.hat[-1, m]
+    res.cen = Y.cen - beta.hat[1, i] - X.cen %*% beta.hat[-1, i]
     temp = res.cen * (tauSeq[i] - (res.cen < 0))
     res = res + mean(temp)
   }
