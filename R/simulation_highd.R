@@ -241,7 +241,7 @@ dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
 
-## error, not good
+## error
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = tau, y = error)) +
   geom_line(aes(y = error, color = type, linetype = type), size = 3) + 
@@ -255,7 +255,7 @@ ggplot(dat, aes(x = tau, y = error)) +
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
-## RE, not good
+## RE
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = tau, y = RE)) +
   geom_line(aes(y = RE, color = type, linetype = type), size = 3) + 
