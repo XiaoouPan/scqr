@@ -25,47 +25,49 @@ getSigma = function(p) {
 
 exam = function(beta, beta.hat, beta.oracle) {
   m = ncol(beta)
-  TPR = TNR = PPV = err = rep(0, m)
+  TPR = TNR = PPV = FDR = err = rep(0, m)
   for (i in 1:m) {
     TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
     TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
     PPV[i] = 0
+    FDR[i] = 0
     if (sum(beta.hat[-1, i] != 0) > 0) {
       PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
+      FDR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
     }
-    err[i] = norm(beta[-1, i] - beta.hat[-1, i], "2")
+    err[i] = norm(beta[, i] - beta.hat[, i], "2")
   }
   tt = ncol(beta.oracle)
   RE = rep(0, tt)
   for (i in 1:tt) {
-    err.ora = norm(beta[-1, i] - beta.oracle[-1, i], "2")
+    err.ora = norm(beta[, i] - beta.oracle[, i], "2")
     RE[i] = err[i] / err.ora
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "error" = err, "RE" = RE))
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err, "RE" = RE))
 }
 
 
-
 #### Quantile process with fixed scale, hard to visualize
-n = 200
-p = 500
+n = 400
+p = 1000
 s = 10
-M = 50
-kfolds = 5
-tauSeq = seq(0.2, 0.8, by = 0.05)
+M = 500
+kfolds = 3
+tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
-grid = seq(0.2, 0.85, by = 0.05)
+grid = seq(0.2, 0.75, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
+Sigma = getSigma(p)
+lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
 
 time = prop = rep(0, M)
-TPR = TNR = PPV = error = RE = matrix(0, m, M)
+TPR = TNR = PPV = FDR = error = RE = matrix(0, m, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
   #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
-  Sigma = getSigma(p)
   X = mvrnorm(n, rep(0, p), Sigma)
   #Sigma = getSigma(45)
   #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
@@ -85,18 +87,22 @@ for (i in 1:M) {
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
+  folds = createFolds(censor, kfolds, FALSE)
+  ##  Check if there are enough test samples
+  if (sum(censor[folds == 1] == 1) <= 5 | sum(censor[folds == 2] == 1) <= 5 | sum(censor[folds == 3] == 1) <= 5) {
+    setTxtProgressBar(pb, i / M)
+    next
+  }
   
   ## Peng and Huang on the oracle set
-  list = crq(response ~ X[, which(beta != 0)], method = "PengHuang", grid = grid)
+  list = crq(response ~ X[, 1:s], method = "PengHuang", grid = grid)
   beta.oracle = list$sol[2:(s + 2), ]
   tt = ncol(beta.oracle)
   beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
   
-  folds = createFolds(Y, kfolds, FALSE)
   fit = cv.glmnet(X, Y, nlambda = 50)
-  lambdaSeq = fit$lambda
   s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = (s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2
+  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 1), 0.1)
   
   ## SCQR-Lasso
   start = Sys.time()
@@ -107,6 +113,7 @@ for (i in 1:M) {
   TPR[, i] = test$TPR
   TNR[, i] = test$TNR
   PPV[, i] = test$PPV
+  FDR[, i] = test$FDR
   error[, i] = test$error
   RE[, i] = test$RE
   
@@ -119,6 +126,7 @@ for (i in 1:M) {
   TPR[, i] = test$TPR
   TNR[, i] = test$TNR
   PPV[, i] = test$PPV
+  FDR[, i] = test$FDR
   error[, i] = test$error
   RE[, i] = test$RE
   
@@ -131,6 +139,7 @@ for (i in 1:M) {
   TPR[, i] = test$TPR
   TNR[, i] = test$TNR
   PPV[, i] = test$PPV
+  FDR[, i] = test$FDR
   error[, i] = test$error
   RE[, i] = test$RE
   
