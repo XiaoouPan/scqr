@@ -151,23 +151,33 @@ for (i in 1:M) {
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
-mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
-mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
+mtc.scad = as.matrix(cbind(read.csv("mtc_scad1.csv")[, 2:101], 
+                           read.csv("mtc_scad2.csv")[, 102:201],
+                           read.csv("mtc_scad3.csv")[, 202:301],
+                           read.csv("mtc_scad4.csv")[, 302:401],
+                           read.csv("mtc_scad5.csv")[, 402:501]))
+mtc.mcp = as.matrix(cbind(read.csv("mtc_mcp1.csv")[, 2:101],
+                          read.csv("mtc_mcp2.csv")[, 102:201],
+                          read.csv("mtc_mcp3.csv")[, 202:301],
+                          read.csv("mtc_mcp4.csv")[, 302:401],
+                          read.csv("mtc_mcp5.csv")[, 402:501]))
 
-ind1 = 1:13
-ind2 = 14:26
-ind3 = 27:39
-ind4 = 40:52
-ind5 = 53:65
+ind1 = 1:11
+ind2 = 12:22
+ind3 = 23:33
+ind4 = 34:44
+ind5 = 45:55
+ind6 = 56:66
 
 ### Dataframe construction
 TPR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
 TNR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind2], rowMeans(mtc.scad, na.rm = TRUE)[ind2], rowMeans(mtc.mcp, na.rm = TRUE)[ind2])
 PPV = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind3], rowMeans(mtc.scad, na.rm = TRUE)[ind3], rowMeans(mtc.mcp, na.rm = TRUE)[ind3])
-error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind4], rowMeans(mtc.scad, na.rm = TRUE)[ind4], rowMeans(mtc.mcp, na.rm = TRUE)[ind4])
-RE = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind5], rowMeans(mtc.scad, na.rm = TRUE)[ind5], rowMeans(mtc.mcp, na.rm = TRUE)[ind5])
-dat = as.data.frame(cbind(TPR, TNR, PPV, error, RE))
-colnames(dat) = c("TPR", "TNR", "PPV", "error", "RE")
+FDR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind4], rowMeans(mtc.scad, na.rm = TRUE)[ind4], rowMeans(mtc.mcp, na.rm = TRUE)[ind4])
+error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind5], rowMeans(mtc.scad, na.rm = TRUE)[ind5], rowMeans(mtc.mcp, na.rm = TRUE)[ind5])
+RE = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind6], rowMeans(mtc.scad, na.rm = TRUE)[ind6], rowMeans(mtc.mcp, na.rm = TRUE)[ind6])
+dat = as.data.frame(cbind(TPR, TNR, PPV, FDR, error, RE))
+colnames(dat) = c("TPR", "TNR", "PPV", "FDR", "error", "RE")
 dat$tau = rep(tauSeq, 3)
 dat$type = c(rep("\\texttt{Lasso}", nTau), rep("\\texttt{SCAD}", nTau), rep("\\texttt{MCP}", nTau))
 dat$type = factor(dat$type, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
@@ -214,6 +224,22 @@ ggplot(dat, aes(x = tau, y = PPV)) +
         axis.title = element_text(size = 20))
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
+
+
+## FDR
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = tau, y = FDR)) +
+  geom_line(aes(y = FDR, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
+  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
+  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Precision") +
+  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+        axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
 
 ## error, not good
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
