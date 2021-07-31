@@ -78,7 +78,7 @@ for (i in 1:M) {
   logT = X %*% beta + err
   ## Hetero
   #X[, 1] = abs(X[, 1])
-  #beta = runif(p - 1, -2, 2)
+  #beta = c(runif(s - 1, 1.5, 2), rep(0, p - s))
   #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
   #logT = X[, 1] * err + X[, -1] %*% beta
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
