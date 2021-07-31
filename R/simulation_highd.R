@@ -232,7 +232,7 @@ ggplot(dat, aes(x = tau, y = FDR)) +
   geom_line(aes(y = FDR, color = type, linetype = type), size = 3) + 
   scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Precision") +
+  theme_bw() + xlab("Quantile level $\\tau$") + ylab("False discover rate") +
   #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
   theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
