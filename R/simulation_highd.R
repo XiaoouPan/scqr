@@ -73,7 +73,7 @@ for (i in 1:M) {
   #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 2, 3), rep(0, p - s))
+  beta = c(runif(s, 1.5, 2), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
