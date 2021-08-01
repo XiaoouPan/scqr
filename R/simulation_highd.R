@@ -48,9 +48,9 @@ exam = function(beta, beta.hat, beta.oracle) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
-p = 1000
-s = 10
+n = 40
+p = 100
+s = 1
 M = 500
 kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)
@@ -99,6 +99,17 @@ for (i in 1:M) {
   beta.oracle = list$sol[2:(s + 2), ]
   tt = ncol(beta.oracle)
   beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
+  
+  ## HDCQR-Lasso using quantreg
+  start = Sys.time()
+  fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
+  ffit = rq(Y ~ X, method = "lasso")
+  end = Sys.time()
+  
+  Y.hd = c(Y, 10^4, 10^4)
+  censor.hd = c(censor, 1, 1)
+  X.hd = rbind(X, rep(0, p), rep(0, p))
+  
   
   fit = cv.glmnet(X, Y, nlambda = 50)
   s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
