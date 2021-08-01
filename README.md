@@ -12,7 +12,7 @@ In the high dimensional regime, the sparse learning problem is solved by iterati
 
 ## References
 
-He, X., Pan, X., Tan, K. M., and Zhou, W.-X. (2020). Smoothed quantile regression with large-scale inference. [Paper](https://www.math.ucsd.edu/~xip024/Papers/sqr_main.pdf)
+He, X., Pan, X., Tan, K. M., and Zhou, W.-X. (2020). Smoothed quantile regression with large-scale inference. *J. Econometrics*, to appear. [Paper](https://www.math.ucsd.edu/~xip024/Papers/sqr_main.pdf)
 
 Koenker, R. and Bassett, G. (1978). Regression quantiles. *Econometrica* **46** 33-50. [Paper](https://www.jstor.org/stable/1913643?seq=1#metadata_info_tab_contents)
 
