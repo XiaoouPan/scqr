@@ -48,9 +48,9 @@ exam = function(beta, beta.hat, beta.oracle) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 40
-p = 100
-s = 1
+n = 400
+p = 1000
+s = 10
 M = 500
 kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)

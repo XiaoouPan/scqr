@@ -82,7 +82,7 @@ tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.02), log(0.2), length.out = 50))
+lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
 error = res = matrix(0, 50, M)
 
@@ -116,9 +116,9 @@ for (i in 1:M) {
   
   for (j in 1:50) {
     ## SCQR-Lasso
-    #beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    #error[j, i] = exam(betaMat, beta.lasso, HSeq)
-    #res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
+    beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.lasso, HSeq)
+    res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
     
     ## SCQR-SCAD
     beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
