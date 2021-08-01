@@ -25,7 +25,7 @@ getSigma = function(p) {
 
 metric = function(beta, beta.hat) {
   m = ncol(beta)
-  TPR = TNR = PPV = FDR = rep(0, m)
+  TPR = TNR = PPV = FDR = error = rep(0, m)
   for (i in 1:m) {
     TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
     TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
@@ -35,8 +35,9 @@ metric = function(beta, beta.hat) {
       PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
       FDR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
     }
+    error[i] = norm(beta[, i] - beta.hat[, i], "2")
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR))
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = error))
 }
 
 
@@ -96,7 +97,7 @@ for (i in 1:M) {
   #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 2, 3), rep(0, p - s))
+  beta = c(runif(s, 1.5, 2), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
@@ -112,23 +113,23 @@ for (i in 1:M) {
   folds = createFolds(censor, kfolds, FALSE)
   fit = cv.glmnet(X, Y, nlambda = 50)
   s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 1), 0.1)
+  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 0.5), 0.05)
   
   for (j in 1:50) {
     ## SCQR-Lasso
     beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
     error[j, i] = exam(betaMat, beta.lasso, HSeq)
     res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
-    
+
     ## SCQR-SCAD
     beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
     error[j, i] = exam(betaMat, beta.scad, HSeq)
     res[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
     
     ## SCQR-MCP
-    #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    #error[j, i] = exam(betaMat, beta.mcp, HSeq)
-    #res[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
+    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error[j, i] = exam(betaMat, beta.mcp, HSeq)
+    res[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
     
     setTxtProgressBar(pb, (j + (i - 1) * 50) / (50 * M))
   }

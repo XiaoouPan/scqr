@@ -331,7 +331,7 @@ arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
   // Contraction
-  arma::vec Lambda = cmptLambdaSCAD(beta, lambda, sx1, p);
+  arma::vec Lambda = cmptLambdaLasso(lambda, sx1, p);
   double phi = phi0;
   int ite = 0;
   while (ite <= iteMax) {
@@ -346,7 +346,7 @@ arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 2) {
+  while (iteT <= 1) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -375,7 +375,7 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
                    const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   arma::vec betaNew = beta;
   // Contraction
-  arma::vec Lambda = cmptLambdaSCAD(beta, lambda, sx1, p);
+  arma::vec Lambda = cmptLambdaLasso(lambda, sx1, p);
   double phi = phi0;
   int ite = 0;
   while (ite <= iteMax) {
@@ -390,7 +390,7 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 2) {
+  while (iteT <= 1) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -422,7 +422,7 @@ arma::vec sqr0Mcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
   // Contraction
-  arma::vec Lambda = cmptLambdaMCP(beta, lambda, sx1, p);
+  arma::vec Lambda = cmptLambdaLasso(lambda, sx1, p);
   double phi = phi0;
   int ite = 0;
   while (ite <= iteMax) {
@@ -466,7 +466,7 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
                   const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   arma::vec betaNew = beta;
   // Contraction
-  arma::vec Lambda = cmptLambdaMCP(beta, lambda, sx1, p);
+  arma::vec Lambda = cmptLambdaLasso(lambda, sx1, p);
   double phi = phi0;
   int ite = 0;
   while (ite <= iteMax) {
