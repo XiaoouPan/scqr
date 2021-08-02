@@ -77,7 +77,7 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 n = 100
 p = 10
 s = 2
-M = 5
+M = 1
 kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
@@ -85,7 +85,7 @@ nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
-error1 = error2 = res1 = res2 = matrix(0, 50, M)
+error1 = error2 = error3 = res1 = res2 = res3 = matrix(0, 50, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -127,21 +127,23 @@ for (i in 1:M) {
     res2[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
     
     ## SCQR-MCP
-    #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    #error[j, i] = exam(betaMat, beta.mcp, HSeq)
-    #res[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
+    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    error3[j, i] = exam(betaMat, beta.mcp, HSeq)
+    res3[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
     
     setTxtProgressBar(pb, (j + (i - 1) * 50) / (50 * M))
   }
 }
 
 
-cbind(rowMeans(error1), rowMeans(error2))
-cbind(rowMeans(res1), rowMeans(res2))
+cbind(rowMeans(error1), rowMeans(error2), rowMeans(error3))
+cbind(rowMeans(res1), rowMeans(res2), rowMeans(res3))
 plot(rowMeans(error1), type = "l")
 lines(rowMeans(error2), type = "l", col = "red")
+lines(rowMeans(error3), type = "l", col = "blue")
 plot(rowMeans(res1), type = "l")
 lines(rowMeans(res2), type = "l", col = "red")
+lines(rowMeans(res3), type = "l", col = "blue")
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
