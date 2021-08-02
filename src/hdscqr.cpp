@@ -131,6 +131,7 @@ double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, a
   arma::vec betaNew(p + 1);
   arma::vec grad(p + 1);
   double loss = updateL2(Z, Y, beta, grad, n1, tau);
+  double fOld = loss;
   while (true) {
     arma::vec first = beta - grad / phiNew;
     arma::vec second = Lambda / phiNew;
@@ -138,9 +139,10 @@ double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, a
     double fVal = lossL2(Z, Y, betaNew, n1, tau);
     arma::vec diff = betaNew - beta;
     double psiVal = loss + arma::as_scalar(grad.t() * diff) + 0.5 * phiNew * arma::as_scalar(diff.t() * diff);
-    if (fVal <= psiVal) {
+    if (std::abs(fOld - fVal) <= 0.001 || fVal <= psiVal) {
       break;
     }
+    fOld = fVal;
     phiNew *= gamma;
   }
   beta = betaNew;
@@ -154,17 +156,25 @@ double lammSq(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, c
   arma::vec betaNew(p + 1);
   arma::vec grad(p + 1);
   double loss = updateGauss(Z, censor, Y, accu, beta, grad, tau, n1, h, h1, h2);
+  double fOld = loss;
+  //std::cout << "old loss: " << loss << std::endl;
   while (true) {
     arma::vec first = beta - grad / phiNew;
     arma::vec second = Lambda / phiNew;
     betaNew = softThresh(first, second, p);
     double fVal = lossGauss(Z, censor, Y, accu, betaNew, tau, h, h1, h2);
+    //std::cout << "F: " << fVal << std::endl;
     arma::vec diff = betaNew - beta;
     double psiVal = loss + arma::as_scalar(grad.t() * diff) + 0.5 * phiNew * arma::as_scalar(diff.t() * diff);
-    if (fVal <= psiVal) {
+    //std::cout << "phi term 1: " << arma::as_scalar(grad.t() * diff) << std::endl;
+    //std::cout << "phi term 2: " << 0.5 * phiNew * arma::as_scalar(diff.t() * diff) << std::endl;
+    //std::cout << "Psi: " << psiVal << std::endl;
+    if (std::abs(fOld - fVal) <= 0.001 || fVal <= psiVal) {
       break;
     }
+    fOld = fVal;
     phiNew *= gamma;
+    //std::cout << "phi: " << phiNew << std::endl;
   }
   beta = betaNew;
   return phiNew;
@@ -346,7 +356,7 @@ arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 1) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -387,10 +397,11 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
     }
     beta = betaNew;
   }
+  //std::cout << "cont:" << ite << " phi:" << phi << std::endl;
   int iteT = 0;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 1) {
+  while (iteT <= 5) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -406,6 +417,7 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
       }
       beta = betaNew;
     }
+    // std::cout << "tight:" << ite << " phi:" << phi << std::endl;
     if (arma::norm(betaNew - beta0, "inf") <= epsilon) {
       break;
     }
@@ -507,15 +519,17 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
 // SCQR process with a particular lambda
 // [[Rcpp::export]]
 arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
-                   const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
+                    const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols;
   const int m = tauSeq.size();
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);
-  arma::rowvec mx = arma::mean(X, 0);
-  arma::vec sx1 = 1.0 / arma::stddev(X, 0, 0).t();
-  arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
-  double my = arma::mean(Y);
-  Y -= my;
+  arma::vec sx1 = arma::ones(p);
+  arma::mat Z = arma::join_rows(arma::ones(n), X);
+  //arma::rowvec mx = arma::mean(X, 0);
+  //arma::vec sx1 = 1.0 / arma::stddev(X, 0, 0).t();
+  //arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
+  //double my = arma::mean(Y);
+  //Y -= my;
   arma::mat betaProc(p + 1, m);
   arma::vec accu = tauSeq(0) * (1 - censor);
   arma::vec betaHat = sqr0Lasso(Z, censor, Y, lambda, accu, sx1, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
@@ -527,8 +541,9 @@ arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
     betaHat = sqrkLasso(Z, censor, Y, lambda, accu, sx1, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
-  betaProc.rows(1, p).each_col() %= sx1;
-  betaProc.row(0) += my - mx * betaProc.rows(1, p);
+  //betaProc.rows(1, p).each_col() %= sx1;
+  //betaProc.row(0) += my - mx * betaProc.rows(1, p);
+  //betaProc.row(0) -= mx * betaProc.rows(1, p);
   return betaProc;
 }
 
@@ -585,30 +600,35 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
 }
 
 // [[Rcpp::export]]
-arma::mat SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
+Rcpp::List SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
                   const double phi0 = 0.01, const double gamma = 1.5, const double epsilon = 0.001, const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols;
   const int m = tauSeq.size();
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);
-  arma::rowvec mx = arma::mean(X, 0);
-  arma::vec sx1 = 1.0 / arma::stddev(X, 0, 0).t();
-  arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
-  double my = arma::mean(Y);
-  Y -= my;
+  arma::vec sx1 = arma::ones(p);
+  arma::mat Z = arma::join_rows(arma::ones(n), X);
+  //arma::rowvec mx = arma::mean(X, 0);
+  //arma::vec sx1 = 1.0 / arma::stddev(X, 0, 0).t();
+  //arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
+  //double my = arma::mean(Y);
+  //Y -= my;
   arma::mat betaProc(p + 1, m);
+  arma::mat accuRec(n, m);
   arma::vec accu = tauSeq(0) * (1 - censor);
+  accuRec.col(0) = accu;
   arma::vec betaHat = sqr0Scad(Z, censor, Y, lambda, accu, sx1, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   arma::vec HSeq = getH(tauSeq);
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
+    accuRec.col(k) = accu;
     betaHat = sqrkScad(Z, censor, Y, lambda, accu, sx1, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
-  betaProc.rows(1, p).each_col() %= sx1;
-  betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return betaProc;
+  //betaProc.rows(1, p).each_col() %= sx1;
+  //betaProc.row(0) += my - mx * betaProc.rows(1, p);
+  return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("accu") = accuRec);
 }
 
 

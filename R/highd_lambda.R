@@ -74,18 +74,18 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
-p = 1000
-s = 10
-M = 2
-kfolds = 5
+n = 100
+p = 10
+s = 2
+M = 5
+kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
+lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
-error = res = matrix(0, 50, M)
+error1 = error2 = res1 = res2 = matrix(0, 50, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -118,28 +118,30 @@ for (i in 1:M) {
   for (j in 1:50) {
     ## SCQR-Lasso
     beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.lasso, HSeq)
-    res[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
+    error1[j, i] = exam(betaMat, beta.lasso, HSeq)
+    res1[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
 
     ## SCQR-SCAD
     beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.scad, HSeq)
-    res[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
+    error2[j, i] = exam(betaMat, beta.scad, HSeq)
+    res2[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
     
     ## SCQR-MCP
-    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error[j, i] = exam(betaMat, beta.mcp, HSeq)
-    res[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
+    #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error[j, i] = exam(betaMat, beta.mcp, HSeq)
+    #res[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
     
     setTxtProgressBar(pb, (j + (i - 1) * 50) / (50 * M))
   }
 }
 
 
-rowMeans(error)
-rowMeans(res)
-plot(rowMeans(error), type = "l")
-plot(rowMeans(res), type = "l")
+cbind(rowMeans(error1), rowMeans(error2))
+cbind(rowMeans(res1), rowMeans(res2))
+plot(rowMeans(error1), type = "l")
+lines(rowMeans(error2), type = "l", col = "red")
+plot(rowMeans(res1), type = "l")
+lines(rowMeans(res2), type = "l", col = "red")
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")

@@ -48,10 +48,10 @@ exam = function(beta, beta.hat, beta.oracle) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
-p = 1000
-s = 10
-M = 500
+n = 100
+p = 10
+s = 2
+M = 10
 kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
@@ -101,19 +101,18 @@ for (i in 1:M) {
   beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
   
   ## HDCQR-Lasso using quantreg
-  start = Sys.time()
-  fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
-  ffit = rq(Y ~ X, method = "lasso")
-  end = Sys.time()
+  #start = Sys.time()
+  #fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
+  #ffit = rq(Y ~ X, method = "lasso")
+  #end = Sys.time()
   
-  Y.hd = c(Y, 10^4, 10^4)
-  censor.hd = c(censor, 1, 1)
-  X.hd = rbind(X, rep(0, p), rep(0, p))
-  
+  #Y.hd = c(Y, 10^4, 10^4)
+  #censor.hd = c(censor, 1, 1)
+  #X.hd = rbind(X, rep(0, p), rep(0, p))
   
   fit = cv.glmnet(X, Y, nlambda = 50)
   s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 1), 0.1)
+  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 0.5), 0.1)
   
   ## SCQR-Lasso
   start = Sys.time()
@@ -142,17 +141,17 @@ for (i in 1:M) {
   RE[, i] = test$RE
   
   ## SCQR-MCP
-  start = Sys.time()
-  beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.mcp, beta.oracle)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
+  #start = Sys.time()
+  #beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  #end = Sys.time()
+  #time[i] = as.numeric(difftime(end, start, units = "secs"))
+  #test = exam(betaMat, beta.mcp, beta.oracle)
+  #TPR[, i] = test$TPR
+  #TNR[, i] = test$TNR
+  #PPV[, i] = test$PPV
+  #FDR[, i] = test$FDR
+  #error[, i] = test$error
+  #RE[, i] = test$RE
   
   setTxtProgressBar(pb, i / M)
 }
