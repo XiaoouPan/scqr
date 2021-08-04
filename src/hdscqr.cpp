@@ -34,29 +34,27 @@ arma::vec cmptLambdaLasso(const double lambda, const int p) {
 }
 
 // [[Rcpp::export]]
-arma::vec cmptLambdaSCAD(const arma::vec& beta, const double lambda, const int p) {
-  arma::vec rst(p + 1);
-  rst(0) = 0;
+arma::vec cmptLambdaSCAD(const arma::vec& beta, const double lambda, const int p, const double para = 3.7) {
+  arma::vec rst = arma::zeros(p + 1);
   for (int i = 1; i <= p; i++) {
     double abBeta = std::abs(beta(i));
     if (abBeta <= lambda) {
       rst(i) = lambda;
-    } else if (abBeta <= 3.7 * lambda) {
-      rst(i) = 0.37037 * (3.7 * lambda - abBeta);
-    } else {
-      rst(i) = 0;
-    }
+    } else if (abBeta <= para * lambda) {
+      rst(i) = (para * lambda - abBeta) / (para - 1);
+    } 
   }
   return rst;
 }
 
 // [[Rcpp::export]]
-arma::vec cmptLambdaMCP(const arma::vec& beta, const double lambda, const int p) {
-  arma::vec rst(p + 1);
-  rst(0) = 0;
+arma::vec cmptLambdaMCP(const arma::vec& beta, const double lambda, const int p, const double para = 3.0) {
+  arma::vec rst = arma::zeros(p + 1);
   for (int i = 1; i <= p; i++) {
     double abBeta = std::abs(beta(i));
-    rst(i) = (abBeta <= 3 * lambda) ? (lambda - 0.33333 * abBeta) : 0;
+    if (abBeta <= 3 * lambda) {
+      rst(i) = lambda - abBeta / para;
+    }
   }
   return rst;
 }
@@ -342,10 +340,10 @@ arma::vec sqr0Scad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
     }
     beta = betaNew;
   }
-  int iteT = 0;
+  int iteT = 1;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 5) {
+  while (iteT <= 3) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -386,10 +384,10 @@ arma::vec sqrkScad(const arma::mat& Z, const arma::vec& censor, const arma::vec&
     }
     beta = betaNew;
   }
-  int iteT = 0;
+  int iteT = 1;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 5) {
+  while (iteT <= 3) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -433,10 +431,10 @@ arma::vec sqr0Mcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
     }
     beta = betaNew;
   }
-  int iteT = 0;
+  int iteT = 1;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 5) {
+  while (iteT <= 3) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;
@@ -477,10 +475,10 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
     }
     beta = betaNew;
   }
-  int iteT = 0;
+  int iteT = 1;
   // Tightening
   arma::vec beta0(p + 1);
-  while (iteT <= 5) {
+  while (iteT <= 3) {
     iteT++;
     beta = betaNew;
     beta0 = betaNew;

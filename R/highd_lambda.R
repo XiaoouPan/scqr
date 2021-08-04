@@ -13,16 +13,6 @@ rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
 
-getSigma = function(p) {
-  sig = diag(p)
-  for (i in 1:(p - 1)) {
-    for (j in (i + 1):p) {
-      sig[i, j] = sig[j, i] = 0.5^(j - i)
-    }
-  }
-  return (sig)
-}
-
 metric = function(beta, beta.hat) {
   m = ncol(beta)
   TPR = TNR = PPV = FDR = error = rep(0, m)
@@ -79,6 +69,7 @@ p = 10
 s = 2
 M = 1
 kfolds = 3
+h = 0.2
 tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
@@ -90,11 +81,8 @@ error1 = error2 = error3 = res1 = res2 = res3 = matrix(0, 50, M)
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
-  Sigma = getSigma(p)
+  Sigma = toeplitz(0.5^(0:(p - 1)))
   X = mvrnorm(n, rep(0, p), Sigma)
-  #Sigma = getSigma(45)
-  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
   beta = c(runif(s, 1.5, 2), rep(0, p - s))
@@ -109,11 +97,6 @@ for (i in 1:M) {
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
   Y = pmin(logT, logC)
-  
-  folds = createFolds(censor, kfolds, FALSE)
-  fit = cv.glmnet(X, Y, nlambda = 50)
-  s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 0.5), 0.05)
   
   for (j in 1:50) {
     ## SCQR-Lasso
