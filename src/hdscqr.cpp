@@ -63,7 +63,7 @@ arma::vec cmptLambdaMCP(const arma::vec& beta, const double lambda, const int p)
 
 // [[Rcpp::export]]
 double lossL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, const double n1, const double tau) {
-  arma::vec res = Z * beta - Y;
+  arma::vec res = Y - Z * beta;
   double rst = 0.0;
   for (int i = 0; i < Y.size(); i++) {
     rst += (res(i) > 0) ? (tau * res(i) * res(i)) : ((1 - tau) * res(i) * res(i));
@@ -73,12 +73,12 @@ double lossL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, con
 
 // [[Rcpp::export]]
 double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, arma::vec& grad, const double n1, const double tau) {
-  arma::vec res = Z * beta - Y;
+  arma::vec res = Y - Z * beta;
   double rst = 0.0;
   grad = arma::zeros(grad.size());
   for (int i = 0; i < Y.size(); i++) {
     double temp = res(i) > 0 ? tau : (1 - tau);
-    grad += temp * res(i) * Z.row(i).t();
+    grad -= temp * res(i) * Z.row(i).t();
     rst += temp * res(i) * res(i);
   }
   grad *= n1;
