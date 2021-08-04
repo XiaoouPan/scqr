@@ -64,9 +64,9 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 100
-p = 10
-s = 2
+n = 400
+p = 200
+s = 10
 M = 1
 kfolds = 3
 h = 0.2
