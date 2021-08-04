@@ -107,18 +107,18 @@ double calRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, c
 // [[Rcpp::export]]
 double lossGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, const double tau, 
                  const double h, const double h1, const double h2) {
-  arma::vec res = Z * beta - Y;
-  arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
+  arma::vec res = Y - Z * beta;
+  arma::vec temp = 0.3989423 * h  * arma::exp(-0.5 * h2 * arma::square(res)) + tau * res - res % arma::normcdf(-h1 * res);
   return arma::mean(censor % temp - accu % (Z * beta));
 }
 
 // [[Rcpp::export]]
 double updateGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, arma::vec& grad, 
                    const double tau, const double n1, const double h, const double h1, const double h2) {
-  arma::vec res = Z * beta - Y;
-  arma::vec der = censor % arma::normcdf(res * h1) - accu;
+  arma::vec res = Y - Z * beta;
+  arma::vec der = censor % arma::normcdf(-h1 * res) - accu;
   grad = n1 * Z.t() * der;
-  arma::vec temp = 0.39894 * h  * arma::exp(-0.5 * h2 * arma::square(res)) - tau * res + res % arma::normcdf(h1 * res);
+  arma::vec temp = 0.3989423 * h  * arma::exp(-0.5 * h2 * arma::square(res)) + tau * res - res % arma::normcdf(-h1 * res);
   return arma::mean(censor % temp - accu % (Z * beta));
 }
 
