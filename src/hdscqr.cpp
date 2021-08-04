@@ -85,6 +85,7 @@ double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, a
   return 0.5 * n1 * rst;
 }
 
+// This is cumulative residual, not useful for cross-validation
 // [[Rcpp::export]]
 double calRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const int m) {
   double res = 0.0;
