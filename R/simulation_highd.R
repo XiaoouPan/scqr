@@ -51,7 +51,7 @@ exam = function(beta, beta.hat, beta.oracle) {
 n = 100
 p = 10
 s = 2
-M = 10
+M = 1
 kfolds = 3
 tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
