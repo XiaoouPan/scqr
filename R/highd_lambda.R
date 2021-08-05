@@ -64,9 +64,9 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
-p = 200
-s = 10
+n = 80
+p = 20
+s = 2
 M = 1
 kfolds = 3
 h = 0.2
@@ -95,8 +95,8 @@ for (i in 1:M) {
   #logT = X[, 1] * err + X[, -1] %*% beta
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
-  censor = logT <= logC
-  Y = pmin(logT, logC)
+  censor = as.numeric(logT <= logC)
+  Y = as.numeric(pmin(logT, logC))
   
   for (j in 1:50) {
     ## SCQR-Lasso
