@@ -582,6 +582,7 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
   return betaProc;
 }
 
+
 // [[Rcpp::export]]
 arma::mat SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
                   const double phi0 = 0.1, const double gamma = 1.2, const double epsilon = 0.001, const int iteMax = 500) {
@@ -594,13 +595,17 @@ arma::mat SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, cons
   double my = arma::mean(Y);
   Y -= my;
   arma::mat betaProc(p + 1, m);
-  arma::vec accu = tauSeq(0) * (1 - censor);
+  arma::vec accu = tauSeq(0) * (1.0 - censor);
+  std::cout << "k = " << 0 << std::endl;
+  std::cout << accu(0) << ", " << accu(1) << ", " << accu(2) << ", " << accu(3) << ", " << accu(4) << std::endl;
   arma::vec betaHat = sqr0Scad(Z, censor, Y, lambda, accu, tauSeq(0), my, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   arma::vec HSeq = getH(tauSeq);
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
+    std::cout << "k = " << k << std::endl;
+    std::cout << accu(0) << ", " << accu(1) << ", " << accu(2) << ", " << accu(3) << ", " << accu(4) << std::endl;
     betaHat = sqrkScad(Z, censor, Y, lambda, accu, betaHat, tauSeq(k), my, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
