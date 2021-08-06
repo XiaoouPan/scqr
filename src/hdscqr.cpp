@@ -330,7 +330,6 @@ arma::vec sqr0Lasso(const arma::mat& Z, const arma::vec& censor, const arma::vec
   int ite = 0;
   while (ite <= iteMax) {
     ite++;
-    std::cout << "ite: " << ite << std::endl; 
     phi = lammSq(Z, censor, Y, Lambda, accu, betaNew, phi, tau, gamma, p, h, n1, h1, h2);
     phi = std::max(phi0, phi / gamma);
     if (arma::norm(betaNew - beta, "inf") <= epsilon) {
