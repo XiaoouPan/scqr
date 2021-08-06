@@ -147,14 +147,6 @@ double lossGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y
   return arma::mean(censor % temp);
 }
 
-/*// [[Rcpp::export]]
-double lossGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, const double tau, 
-                 const double my, const double h, const double h1, const double h2) {
-  arma::vec res = Y - Z * beta;
-  arma::vec temp = 0.3989423 * h  * arma::exp(-0.5 * h2 * arma::square(res)) + tau * res - res % arma::normcdf(-h1 * res);
-  return arma::mean(censor % temp - accu % (my + Z * beta));
-}*/
-
 // [[Rcpp::export]]
 double updateGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, arma::vec& grad, 
                    arma::vec& gradReal, const double tau, const double n1, const double h, const double h1, const double h2) {
@@ -167,16 +159,6 @@ double updateGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec&
   return arma::mean(censor % temp);
 }
 
-/*// [[Rcpp::export]]
-double updateGauss(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::vec& accu, const arma::vec& beta, arma::vec& grad, 
-                   const double tau, const double my, const double n1, const double h, const double h1, const double h2) {
-  arma::vec res = Y - Z * beta;
-  arma::vec der = censor % arma::normcdf(-h1 * res) - accu;
-  grad = n1 * Z.t() * der;
-  arma::vec temp = 0.3989423 * h  * arma::exp(-0.5 * h2 * arma::square(res)) + tau * res - res % arma::normcdf(-h1 * res);
-  return arma::mean(censor % temp - accu % (my + Z * beta));
-}*/
-
 // LAMM, update beta, return phi
 // [[Rcpp::export]]
 double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, arma::vec& beta, const double tau, const double phi, const double gamma, 
@@ -185,7 +167,6 @@ double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, a
   arma::vec betaNew(p + 1);
   arma::vec grad(p + 1);
   double loss = updateL2(Z, Y, beta, grad, n1, tau);
-  std::cout << "grad norm:" << arma::norm(grad, 2) << std::endl;
   while (true) {
     arma::vec first = beta - grad / phiNew;
     arma::vec second = Lambda / phiNew;
@@ -197,7 +178,6 @@ double lammL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& Lambda, a
       break;
     }
     phiNew *= gamma;
-    std::cout << " F: " << fVal << " psi: " << psiVal << " phi: " << phiNew << std::endl;
   }
   beta = betaNew;
   return phiNew;
@@ -212,7 +192,6 @@ double lammSq(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, c
   arma::vec grad(p + 1);
   arma::vec gradReal(p + 1);
   double loss = updateGauss(Z, censor, Y, accu, beta, grad, gradReal, tau, n1, h, h1, h2);
-  std::cout << "grad norm:" << arma::norm(gradReal, 2) << std::endl;
   while (true) {
     arma::vec first = beta - gradReal / phiNew;
     arma::vec second = Lambda / phiNew;
@@ -224,8 +203,6 @@ double lammSq(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, c
       break;
     }
     phiNew *= gamma;
-    std::cout << "F: " << fVal << " psi: " << psiVal << " phi: " << phiNew << std::endl;
-    std::cout << "beta: " << betaNew(0) << ", " << betaNew(1) << std::endl;
   }
   beta = betaNew;
   return phiNew;
@@ -348,7 +325,6 @@ arma::vec sqr0Lasso(const arma::mat& Z, const arma::vec& censor, const arma::vec
   arma::vec quant = {tau};
   beta(0) = arma::as_scalar(arma::quantile(Y - Z.cols(1, p) * beta.rows(1, p), quant));
   arma::vec betaNew = beta;
-  std::cout << "lasso finished" << std::endl;
   arma::vec Lambda = cmptLambdaLasso(lambda, p);
   double phi = phi0;
   int ite = 0;
