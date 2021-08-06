@@ -12,7 +12,6 @@ library(caret)
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-
 metric = function(beta, beta.hat) {
   m = ncol(beta)
   TPR = TNR = PPV = FDR = error = rep(0, m)
