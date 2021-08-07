@@ -66,14 +66,14 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 n = 80
 p = 20
 s = 2
-M = 1
+M = 20
 kfolds = 3
 h = 0.2
-tauSeq = seq(0.2, 0.7, by = 0.05)
+tauSeq = seq(0.2, 0.8, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
+lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
 error1 = error2 = error3 = res1 = res2 = res3 = matrix(0, 50, M)
 

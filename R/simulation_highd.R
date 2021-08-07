@@ -48,8 +48,8 @@ exam = function(beta, beta.hat, beta.oracle) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 100
-p = 10
+n = 80
+p = 20
 s = 2
 M = 1
 kfolds = 3
