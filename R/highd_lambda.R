@@ -1,4 +1,6 @@
-###### Simulation code for scqr
+###### Testing only.
+###### This file will not be used in the paper
+
 library(quantreg)
 library(MASS)
 library(MultiRNG)
