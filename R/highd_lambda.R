@@ -39,17 +39,50 @@ exam = function(beta, beta.hat, HSeq) {
   return (err)
 }
 
-calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
-  m = ncol(beta.hat)
-  res = censor * (Y <= (beta.hat[1, m] + X %*% beta.hat[-1, m])) - tauSeq[1]
-  for (i in 1:(m - 1)) {
-    res = res - (Y >= (beta.hat[1, i] + X %*% beta.hat[-1, i])) * (HSeq[i + 1] - HSeq[i])
+calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq, m) {
+  res = censor * (Y < (beta.hat[1, m] + X %*% beta.hat[-1, m])) - tauSeq[1]
+  if (m >= 2) {
+    for (i in 1:(m - 1)) {
+      res = res - (Y >= (beta.hat[1, i] + X %*% beta.hat[-1, i])) * (HSeq[i + 1] - HSeq[i])
+    }
   }
-  return (mean(res^2))
+  dev = sqrt(-2 * (res + censor * log(censor - res)))
+  return (list("res" = mean(abs(res)), "dev" = mean(dev)))
 }
 
-calResSum = function(X, censor, Y, beta.hat, tauSeq) {
-  m = ncol(beta.hat)
+## From Fei etal, 2021
+H<-function(x){
+  return (-log(1-x));
+}
+
+calesterr=function(yP,xP,deltaP,JJ,beta){
+  
+  fit=xP%*%t(beta); 
+  testerr=rep(0,length(JJ));
+  
+  sto_weights=matrix(0,length(JJ),dim(xP)[1]);                          #### stochastic weights
+  rproc=matrix(0,length(JJ),dim(xP)[1]);                                #### the indictor (y>=x%*%betahat);
+  sto_weights[1,]=JJ[1];                                             #### the initial weight 2tau0
+  rproc[1,]=1*(yP>=fit[,1]); 
+  
+  countP=(1-rproc[1,])*deltaP;
+  rhs=rep(JJ[1],length(countP));
+  testerr[1]= mean( abs(countP-rhs));
+  
+  for(s in 2:length(JJ)){
+    Hm=H(JJ[s])-H(JJ[s-1]);                                        #### H(tau[s])-H(tau[s-1]) ]']
+    
+    sto_weights[s,]=sto_weights[s-1,]+Hm*rproc[s-1,];  
+    rproc[s,]=1*(yP>=fit[,s]);           #### update the stochastic weight for tau[s]
+    countP=(1-rproc[s,])*deltaP;
+    testerr[s]= mean(abs(countP-sto_weights[s,]));
+  }
+  return (testerr);
+}
+## End of Fei etal, 2021
+
+
+calResSum = function(X, censor, Y, beta.hat, tauSeq, m) {
   res = 0
   X.cen = X[which(censor == 1), ]
   Y.cen = Y[which(censor == 1)]
@@ -63,19 +96,20 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 80
-p = 20
-s = 2
-M = 20
+n = 400
+p = 1000
+s = 10
+M = 10
 kfolds = 3
 h = 0.2
-tauSeq = seq(0.2, 0.8, by = 0.05)
+tauSeq = seq(0.2, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
+lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 HSeq = as.numeric(getH(tauSeq))
-error1 = error2 = error3 = res1 = res2 = res3 = matrix(0, 50, M)
+error1 = error2 = error3 = res1 = res2 = res3 = dev1 = dev2 = dev3 = matrix(0, 50, M)
+TPR1 = TPR2 = TPR3 = FDR1 = FDR2 = FDR3 = resSum1 = resSum2 = resSum3 = matrix(0, 50, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -84,7 +118,7 @@ for (i in 1:M) {
   X = mvrnorm(n, rep(0, p), Sigma)
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 1.5, 2), rep(0, p - s))
+  beta = c(runif(s, 1, 1.5), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
@@ -100,18 +134,41 @@ for (i in 1:M) {
   for (j in 1:50) {
     ## SCQR-Lasso
     beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error1[j, i] = exam(betaMat, beta.lasso, HSeq)
-    res1[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq)
+    #error1[j, i] = exam(betaMat, beta.lasso, HSeq)
+    metric.lasso = metric(betaMat, beta.lasso)
+    res = calesterr(Y, cbind(1, X), censor, tauSeq, t(beta.lasso))
+    error1[j, i] = metric.lasso$error[1]
+    TPR1[j, i] = metric.lasso$TPR[1]
+    FDR1[j, i] = metric.lasso$FDR[1]
+    res1[j, i] = res[1]
+    dev1[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 1)$dev
+    resSum1[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 1)
+    
+    error2[j, i] =  metric.lasso$error[2]
+    TPR2[j, i] = metric.lasso$TPR[2]
+    FDR2[j, i] = metric.lasso$FDR[2]
+    res2[j, i] = res[2]
+    dev2[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 2)$dev
+    resSum2[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 2)
+    
+    error3[j, i] =  metric.lasso$error[3]
+    TPR3[j, i] = metric.lasso$TPR[3]
+    FDR3[j, i] = metric.lasso$FDR[3]
+    res3[j, i] = res[3]
+    dev3[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 3)$dev
+    resSum3[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 3)
 
     ## SCQR-SCAD
-    beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error2[j, i] = exam(betaMat, beta.scad, HSeq)
-    res2[j, i] = calResSum(X, censor, Y, beta.scad, tauSeq)
+    #beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error2[j, i] = exam(betaMat, beta.scad, HSeq)
+    #res2[j, i] = calRes(X, censor, Y, beta.scad, tauSeq, HSeq)
+    #metric.scad = metric(betaMat, beta.scad)
     
     ## SCQR-MCP
-    beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
-    error3[j, i] = exam(betaMat, beta.mcp, HSeq)
-    res3[j, i] = calResSum(X, censor, Y, beta.mcp, tauSeq)
+    #beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[j], tauSeq, h)
+    #error3[j, i] = exam(betaMat, beta.mcp, HSeq)
+    #res3[j, i] = calRes(X, censor, Y, beta.mcp, tauSeq, HSeq)
+    #metric.mcp = metric(betaMat, beta.mcp)
     
     setTxtProgressBar(pb, (j + (i - 1) * 50) / (50 * M))
   }
@@ -121,11 +178,21 @@ for (i in 1:M) {
 cbind(rowMeans(error1), rowMeans(error2), rowMeans(error3))
 cbind(rowMeans(res1), rowMeans(res2), rowMeans(res3))
 plot(rowMeans(error1), type = "l")
-lines(rowMeans(error2), type = "l", col = "red")
-lines(rowMeans(error3), type = "l", col = "blue")
+plot(rowMeans(error2), type = "l", col = "red")
+plot(rowMeans(error3), type = "l", col = "blue")
+plot(rowMeans(TPR1), type = "l")
+plot(rowMeans(TPR2), type = "l", col = "red")
+plot(rowMeans(TPR3), type = "l", col = "blue")
+plot(rowMeans(FDR1), type = "l")
+plot(rowMeans(FDR2), type = "l", col = "red")
+plot(rowMeans(FDR3), type = "l", col = "blue")
 plot(rowMeans(res1), type = "l")
-lines(rowMeans(res2), type = "l", col = "red")
-lines(rowMeans(res3), type = "l", col = "blue")
+plot(rowMeans(res2), type = "l", col = "red")
+plot(rowMeans(res3), type = "l", col = "blue")
+plot(rowMeans(dev1), type = "l")
+plot(rowMeans(dev2), type = "l", col = "red")
+plot(rowMeans(dev3), type = "l", col = "blue")
+
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
