@@ -96,7 +96,7 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq, m) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
+n = 500
 p = 1000
 s = 10
 M = 10
@@ -131,32 +131,36 @@ for (i in 1:M) {
   censor = as.numeric(logT <= logC)
   Y = as.numeric(pmin(logT, logC))
   
+  X.test = X[401:500, ]
+  Y.test = Y[401:500]
+  censor.test = censor[401:500]
+  X = X[1:400, ]
+  Y = Y[1:400]
+  censor = censor[1:400]
+  
   for (j in 1:50) {
     ## SCQR-Lasso
     beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
     #error1[j, i] = exam(betaMat, beta.lasso, HSeq)
     metric.lasso = metric(betaMat, beta.lasso)
-    res = calesterr(Y, cbind(1, X), censor, tauSeq, t(beta.lasso))
+    res = calesterr(Y.test, cbind(1, X.test), censor.test, tauSeq, t(beta.lasso))
     error1[j, i] = metric.lasso$error[1]
     TPR1[j, i] = metric.lasso$TPR[1]
     FDR1[j, i] = metric.lasso$FDR[1]
     res1[j, i] = res[1]
-    dev1[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 1)$dev
-    resSum1[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 1)
-    
+    dev1[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = 1)$dev
+
     error2[j, i] =  metric.lasso$error[2]
     TPR2[j, i] = metric.lasso$TPR[2]
     FDR2[j, i] = metric.lasso$FDR[2]
     res2[j, i] = res[2]
-    dev2[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 2)$dev
-    resSum2[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 2)
-    
+    dev2[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = 2)$dev
+
     error3[j, i] =  metric.lasso$error[3]
     TPR3[j, i] = metric.lasso$TPR[3]
     FDR3[j, i] = metric.lasso$FDR[3]
     res3[j, i] = res[3]
-    dev3[j, i] = calRes(X, censor, Y, beta.lasso, tauSeq, HSeq, m = 3)$dev
-    resSum3[j, i] = calResSum(X, censor, Y, beta.lasso, tauSeq, m = 3)
+    dev3[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = 3)$dev
 
     ## SCQR-SCAD
     #beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
