@@ -12,17 +12,6 @@ library(caret)
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-
-getSigma = function(p) {
-  sig = diag(p)
-  for (i in 1:(p - 1)) {
-    for (j in (i + 1):p) {
-      sig[i, j] = sig[j, i] = 0.5^(j - i)
-    }
-  }
-  return (sig)
-}
-
 exam = function(beta, beta.hat, beta.oracle) {
   m = ncol(beta)
   TPR = TNR = PPV = FDR = err = rep(0, m)
@@ -37,14 +26,70 @@ exam = function(beta, beta.hat, beta.oracle) {
     }
     err[i] = norm(beta[, i] - beta.hat[, i], "2")
   }
-  tt = ncol(beta.oracle)
-  RE = rep(0, tt)
-  for (i in 1:tt) {
-    err.ora = norm(beta[, i] - beta.oracle[, i], "2")
-    RE[i] = err[i] / err.ora
-  }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err, "RE" = RE))
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err))
 }
+
+calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
+  m = length(tauSeq)
+  n = length(Y)
+  accu = matrix(0, n, m)
+  indi = matrix(0, n, m)
+  res = matrix(0, n, m)
+  dev = matrix(0, n, m)
+  Z = cbind(1, X)
+  indi[, 1] = 1 * (Y >= Z %*% beta.hat[, 1])
+  accu[, 1] = rep(tauSeq[1], n)
+  res[, 1] = censor * (1 - indi[, 1]) - tauSeq[1]
+  dev[, 1] = sqrt(-2 * (res[, 1] + censor * log(censor - res[, 1])))
+  for (i in 2:m) {
+    Hgap = HSeq[i] - HSeq[i - 1]
+    accu[, i] = accu[, i - 1] + indi[, i - 1] * Hgap
+    indi[, i] = 1 * (Y >= Z %*% beta.hat[, i])
+    res[, i] = censor * (1 - indi[, i]) - accu[, i]
+    dev[, i] = sqrt(-2 * (res[, i] + censor * log(censor - res[, i])))
+  }
+  return (list("res" = colMeans(abs(res)), "dev" = colMeans(dev)))
+}
+
+H = function(x){
+  return (-log(1 - x))
+}
+
+## From Fei etal, 2021
+quantproc = function(y, x, delta, JJ, lambda, tol=1e-4){
+  
+  pp=dim(x)[2];                                                        #### the number of covariates
+  tmpbeta=matrix(0,length(JJ),pp);                                     #### the coefficient matrix
+  tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=rep(lambda,pp)))
+  beta0 = tmpb*(abs(tmpb)>=tol)
+  tmpbeta[1,]=beta0;
+  
+  sto_weights=matrix(0,length(JJ),dim(x)[1]);                          #### stochastic weights
+  rproc=matrix(0,length(JJ),dim(x)[1]);                                #### the indictor (y>=x%*%betahat);
+  sto_weights[1,]=JJ[1]*2;                                             #### the initial weight 2tau0
+  rproc[1,]=1*(y>=x%*%beta0);                                          #### the initial indicator y>=x%*%betahat0;
+  
+  augy1=y[which(delta==1)];                                            #### the observed event time   
+  augx1=x[which(delta==1),];                                           #### the corresponding covariates
+  
+  augx2=-apply(augx1,2,sum);                                           #### the 2nd part in the objective function                        
+  
+  augy=c(augy1, 1e+4, 1e+4);
+  
+  for(s in 2:length(JJ)){
+    tuning=lambda
+    Hm = H(JJ[s])-H(JJ[s-1]);                                        #### H(tau[s])-H(tau[s-1]) 
+    sto_weights[s,]=sto_weights[s-1,]+2*Hm*rproc[s-1,];            #### update the stochastic weight for tau[s]
+    augx3=sto_weights[s,]%*%x;                                     #### the 3rd part in the objective function
+    augx=rbind(augx1,augx2,augx3);
+    tmpb=coef(rq(augy~0+augx,method="lasso",tau=JJ[s],lambda=rep(tuning,pp)));  #### quantile fit at tau[s];
+    tmpbeta[s,]=tmpb*(abs(tmpb)>=tol);                             #### hard threshholding;
+    rproc[s,] = 1*(y>x%*%tmpbeta[s,]);                               #### update the indicator y>=x%*%betahat at tau[s];	
+  }
+  return(tmpbeta);
+}
+
+
 
 
 #### Quantile process with fixed scale, hard to visualize
@@ -53,32 +98,28 @@ p = 20
 s = 2
 M = 1
 kfolds = 3
-tauSeq = seq(0.2, 0.7, by = 0.05)
+tauSeq = seq(0.1, 0.7, by = 0.05)
 m = length(tauSeq)
-grid = seq(0.2, 0.75, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-Sigma = getSigma(p)
+Sigma = toeplitz(0.5^(0:(p - 1)))
 lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
 
 time = prop = rep(0, M)
-TPR = TNR = PPV = FDR = error = RE = matrix(0, m, M)
+TPR = TNR = PPV = FDR = error = matrix(0, m, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
   X = mvrnorm(n, rep(0, p), Sigma)
-  #Sigma = getSigma(45)
-  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 1.5, 2), rep(0, p - s))
+  beta = c(runif(s, 1, 1.5), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
   #X[, 1] = abs(X[, 1])
-  #beta = c(runif(s - 1, 1.5, 2), rep(0, p - s))
+  #beta = c(runif(s - 1, 1, 1.5), rep(0, p - s))
   #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
   #logT = X[, 1] * err + X[, -1] %*% beta
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
@@ -88,18 +129,7 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   response = Surv(Y, censor, type = "right")
   folds = createFolds(censor, kfolds, FALSE)
-  ##  Check if there are enough test samples
-  if (sum(censor[folds == 1] == 1) <= 5 | sum(censor[folds == 2] == 1) <= 5 | sum(censor[folds == 3] == 1) <= 5) {
-    setTxtProgressBar(pb, i / M)
-    next
-  }
-  
-  ## Peng and Huang on the oracle set
-  list = crq(response ~ X[, 1:s], method = "PengHuang", grid = grid)
-  beta.oracle = list$sol[2:(s + 2), ]
-  tt = ncol(beta.oracle)
-  beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
-  
+
   ## HDCQR-Lasso using quantreg
   #start = Sys.time()
   #fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
@@ -126,33 +156,7 @@ for (i in 1:M) {
   FDR[, i] = test$FDR
   error[, i] = test$error
   RE[, i] = test$RE
-  
-  ## SCQR-SCAD
-  start = Sys.time()
-  beta.scad = cvSqrScad(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.scad, beta.oracle)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
-  
-  ## SCQR-MCP
-  #start = Sys.time()
-  #beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  #end = Sys.time()
-  #time[i] = as.numeric(difftime(end, start, units = "secs"))
-  #test = exam(betaMat, beta.mcp, beta.oracle)
-  #TPR[, i] = test$TPR
-  #TNR[, i] = test$TNR
-  #PPV[, i] = test$PPV
-  #FDR[, i] = test$FDR
-  #error[, i] = test$error
-  #RE[, i] = test$RE
-  
+
   setTxtProgressBar(pb, i / M)
 }
 
