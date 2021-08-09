@@ -81,6 +81,39 @@ calesterr=function(yP,xP,deltaP,JJ,beta){
   }
   return (testerr);
 }
+
+quantproc=function(y,x,delta,JJ,lambda,incr=0,	tol=1e-4){
+  
+  pp=dim(x)[2];                                                        #### the number of covariates
+  tmpbeta=matrix(0,length(JJ),pp);                                     #### the coefficient matrix
+  tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=rep(lambda,pp)))
+  beta0 = tmpb*(abs(tmpb)>=tol)
+  tmpbeta[1,]=beta0;
+  
+  sto_weights=matrix(0,length(JJ),dim(x)[1]);                          #### stochastic weights
+  rproc=matrix(0,length(JJ),dim(x)[1]);                                #### the indictor (y>=x%*%betahat);
+  sto_weights[1,]=JJ[1]*2;                                             #### the initial weight 2tau0
+  rproc[1,]=1*(y>=x%*%beta0);                                          #### the initial indicator y>=x%*%betahat0;
+  
+  augy1=y[which(delta==1)];                                            #### the observed event time   
+  augx1=x[which(delta==1),];                                           #### the corresponding covariates
+  
+  augx2=-apply(augx1,2,sum);                                           #### the 2nd part in the objective function                        
+  
+  augy=c(augy1, 1e+4, 1e+4);
+  
+  for(s in 2:length(JJ)){
+    tuning=lambda+(s-1)*incr
+    Hm = H(JJ[s])-H(JJ[s-1]);                                        #### H(tau[s])-H(tau[s-1]) 
+    sto_weights[s,]=sto_weights[s-1,]+2*Hm*rproc[s-1,];            #### update the stochastic weight for tau[s]
+    augx3=sto_weights[s,]%*%x;                                     #### the 3rd part in the objective function
+    augx=rbind(augx1,augx2,augx3);
+    tmpb=coef(rq(augy~0+augx,method="lasso",tau=JJ[s],lambda=rep(tuning,pp)));  #### quantile fit at tau[s];
+    tmpbeta[s,]=tmpb*(abs(tmpb)>=tol);                             #### hard threshholding;
+    rproc[s,] = 1*(y>x%*%tmpbeta[s,]);                               #### update the indicator y>=x%*%betahat at tau[s];	
+  }
+  return(tmpbeta);
+}
 ## End of Fei etal, 2021
 
 
@@ -98,13 +131,13 @@ calResSum = function(X, censor, Y, beta.hat, tauSeq, m) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 500
-p = 1000
-s = 10
+n = 80
+p = 100
+s = 2
 M = 10
 kfolds = 3
-h = 0.2
-tauSeq = seq(0.2, 0.7, by = 0.05)
+h = (log(p) / n)^(1/4)
+tauSeq = seq(0.1, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
@@ -141,6 +174,9 @@ for (i in 1:M) {
   censor = censor[1:400]
   
   for (j in 1:50) {
+    ## Quantreg package
+    beta.qr = quantproc(Y, cbind(1, X), censor, tauSeq, lambdaSeq[j])
+    
     ## SCQR-Lasso
     beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[j], tauSeq, h)
     #error1[j, i] = exam(betaMat, beta.lasso, HSeq)
@@ -158,11 +194,11 @@ for (i in 1:M) {
     res2[j, i] = res[2]
     dev2[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = 2)$dev
 
-    error3[j, i] =  metric.lasso$error[3]
-    TPR3[j, i] = metric.lasso$TPR[3]
-    FDR3[j, i] = metric.lasso$FDR[3]
-    res3[j, i] = res[3]
-    dev3[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = 3)$dev
+    error3[j, i] =  metric.lasso$error[m]
+    TPR3[j, i] = metric.lasso$TPR[m]
+    FDR3[j, i] = metric.lasso$FDR[m]
+    res3[j, i] = res[m]
+    dev3[j, i] = calRes(X.test, censor.test, Y.test, beta.lasso, tauSeq, HSeq, m = m)$dev
 
     ## SCQR-SCAD
     #beta.scad = SqrScad(X, censor, Y, lambdaSeq[j], tauSeq, h)
