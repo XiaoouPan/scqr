@@ -112,10 +112,10 @@ cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
 
 
 #### High-dim quantile process with fixed scale
-n = 100
-p = 200
-s = 3
-M = 1
+n = 400
+p = 1000
+s = 10
+M = 50
 kfolds = 3
 h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
