@@ -5,10 +5,8 @@ library(MultiRNG)
 library(matrixStats)
 library(survival)
 library(caret)
-library(rqPen)
 library(tikzDevice)
 library(ggplot2)
-library(glmnet)
 
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
@@ -113,7 +111,7 @@ cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
 }
 
 
-#### Quantile process with fixed scale, hard to visualize
+#### High-dim quantile process with fixed scale
 n = 100
 p = 200
 s = 3
@@ -133,13 +131,10 @@ TPR = TNR = PPV = FDR = error = matrix(0, m, M)
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  #X = mvrnorm(n, rep(0, p), Sigma)
-  X = matrix(runif(n * p, -1, 1), n, p)
-  #err = rt(n, 2)
-  err = rnorm(n)
+  X = mvrnorm(n, rep(0, p), Sigma)
+  err = rt(n, 2)
   ## Homo
-  #beta = c(runif(s, 1, 1.5), rep(0, p - s))
-  beta = c(0.5, 1, 1.5, rep(0, p - s))
+  beta = c(runif(s, 1, 1.5), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
@@ -148,9 +143,8 @@ for (i in 1:M) {
   #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
   #logT = X[, 1] * err + X[, -1] %*% beta
   
-  #w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
-  #logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
-  logC = rnorm(n, 3, sqrt(17.25))
+  w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
+  logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
@@ -158,11 +152,6 @@ for (i in 1:M) {
   folds = createFolds(censor, kfolds, FALSE)
 
   ## HDCQR-Lasso using quantreg
-  beta.lasso = LASSO.fit(Y, X, tau = 0.1, lambda = lambdaSeq[20], intercept = TRUE, coef.cutoff = 0.0001)
-  fit = cv.rq.pen(X, Y, tau =.1, lambda = lambdaSeq, penalty = "LASSO", nfolds = 3)
-  
-  
-  
   start = Sys.time()
   beta.cqr = cvCqr(X, censor, Y, lambdaSeq, tauSeq, kfolds, folds)
   end = Sys.time()
@@ -180,7 +169,7 @@ for (i in 1:M) {
   beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.lasso, beta.oracle)
+  test = exam(betaMat, beta.lasso)
   TPR[, i] = test$TPR
   TNR[, i] = test$TNR
   PPV[, i] = test$PPV
