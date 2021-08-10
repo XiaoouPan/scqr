@@ -4,15 +4,16 @@ library(MASS)
 library(MultiRNG)
 library(matrixStats)
 library(survival)
+library(caret)
+library(rqPen)
 library(tikzDevice)
 library(ggplot2)
 library(glmnet)
-library(caret)
 
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-exam = function(beta, beta.hat, beta.oracle) {
+exam = function(beta, beta.hat) {
   m = ncol(beta)
   TPR = TNR = PPV = FDR = err = rep(0, m)
   for (i in 1:m) {
@@ -29,52 +30,51 @@ exam = function(beta, beta.hat, beta.oracle) {
   return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err))
 }
 
-calRes = function(X, censor, Y, beta.hat, tauSeq, HSeq) {
+calRes = function(Z, censor, Y, beta.hat, tauSeq, HSeq) {
   m = length(tauSeq)
   n = length(Y)
-  accu = matrix(0, n, m)
-  indi = matrix(0, n, m)
-  res = matrix(0, n, m)
-  dev = matrix(0, n, m)
-  Z = cbind(1, X)
-  indi[, 1] = 1 * (Y >= Z %*% beta.hat[, 1])
-  accu[, 1] = rep(tauSeq[1], n)
-  res[, 1] = censor * (1 - indi[, 1]) - tauSeq[1]
-  dev[, 1] = sqrt(-2 * (res[, 1] + censor * log(censor - res[, 1])))
+  rst = 0
+  indi = 1 * (Y >= Z %*% beta.hat[, 1])
+  accu = rep(tauSeq[1], n)
+  res = censor * (1 - indi) - tauSeq[1]
+  dev = sqrt(-2 * (res + censor * log(censor - res)))
+  rst = rst + mean(dev)
   for (i in 2:m) {
     Hgap = HSeq[i] - HSeq[i - 1]
-    accu[, i] = accu[, i - 1] + indi[, i - 1] * Hgap
-    indi[, i] = 1 * (Y >= Z %*% beta.hat[, i])
-    res[, i] = censor * (1 - indi[, i]) - accu[, i]
-    dev[, i] = sqrt(-2 * (res[, i] + censor * log(censor - res[, i])))
+    accu = accu + indi * Hgap
+    indi = 1 * (Y >= Z %*% beta.hat[, i])
+    res = censor * (1 - indi) - accu
+    dev = sqrt(-2 * (res + censor * log(censor - res)))
+    rst = rst + mean(dev)
   }
-  return (list("res" = colMeans(abs(res)), "dev" = colMeans(dev)))
+  return (rst)
 }
 
-H = function(x){
+H = function(x) {
   return (-log(1 - x))
 }
 
-## From Fei etal, 2021
+## The following function is modified based on Fei etal, 2021
 quantproc = function(y, x, delta, JJ, lambda, tol=1e-4){
   
   pp=dim(x)[2];                                                        #### the number of covariates
   tmpbeta=matrix(0,length(JJ),pp);                                     #### the coefficient matrix
-  tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=rep(lambda,pp)))
-  beta0 = tmpb*(abs(tmpb)>=tol)
-  tmpbeta[1,]=beta0;
+  
+  augy1=y[which(delta==1)];                                            #### the observed event time   
+  augx1=x[which(delta==1),];                                           #### the corresponding covariates
+  augx2= -colSums(augx1)                                         #### the 2nd part in the objective function                        
+  augy=c(augy1, 5000, 5000);
   
   sto_weights=matrix(0,length(JJ),dim(x)[1]);                          #### stochastic weights
   rproc=matrix(0,length(JJ),dim(x)[1]);                                #### the indictor (y>=x%*%betahat);
   sto_weights[1,]=JJ[1]*2;                                             #### the initial weight 2tau0
+  augx3=sto_weights[1,]%*%x;                                     #### the 3rd part in the objective function
+  augx=rbind(augx1,augx2,augx3);
+  #tmpb = coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=lambda))
+  tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=lambda))
+  beta0 = tmpb*(abs(tmpb)>=tol)
+  tmpbeta[1,]=beta0;
   rproc[1,]=1*(y>=x%*%beta0);                                          #### the initial indicator y>=x%*%betahat0;
-  
-  augy1=y[which(delta==1)];                                            #### the observed event time   
-  augx1=x[which(delta==1),];                                           #### the corresponding covariates
-  
-  augx2=-apply(augx1,2,sum);                                           #### the 2nd part in the objective function                        
-  
-  augy=c(augy1, 1e+4, 1e+4);
   
   for(s in 2:length(JJ)){
     tuning=lambda
@@ -82,28 +82,51 @@ quantproc = function(y, x, delta, JJ, lambda, tol=1e-4){
     sto_weights[s,]=sto_weights[s-1,]+2*Hm*rproc[s-1,];            #### update the stochastic weight for tau[s]
     augx3=sto_weights[s,]%*%x;                                     #### the 3rd part in the objective function
     augx=rbind(augx1,augx2,augx3);
-    tmpb=coef(rq(augy~0+augx,method="lasso",tau=JJ[s],lambda=rep(tuning,pp)));  #### quantile fit at tau[s];
+    tmpb=coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=tuning));  #### quantile fit at tau[s];
     tmpbeta[s,]=tmpb*(abs(tmpb)>=tol);                             #### hard threshholding;
     rproc[s,] = 1*(y>x%*%tmpbeta[s,]);                               #### update the indicator y>=x%*%betahat at tau[s];	
   }
-  return(tmpbeta);
+  return (t(tmpbeta));
+}
+
+cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
+  l = length(lambdaSeq)
+  mse = rep(0, l)
+  Z = cbind(1, X)
+  HSeq = H(tauSeq)
+  for (k in 1:K) {
+    indTest = which(folds == k)
+    indTrain = which(folds != k)
+    Ztrain = Z[indTrain, ]
+    Ztest = Z[indTest, ]
+    Ytrain = Y[indTrain]
+    Ytest = Y[indTest]
+    censorTrain = censor[indTrain]
+    censorTest = censor[indTest]
+    for (i in 1:l) {
+      lambda = lambdaSeq[i]
+      betaHat = quantproc(Ytrain, Ztrain, censorTrain, tauSeq, lambda)
+      mse[i] = mse[i] + calRes(Ztest, censorTest, Ytest, betaHat, tauSeq, HSeq)
+    }
+  }
+  index = which.min(mse)
+  return (quantproc(Y, Z, censor, tauSeq, lambdaSeq[index]))
 }
 
 
-
-
 #### Quantile process with fixed scale, hard to visualize
-n = 80
-p = 20
-s = 2
+n = 100
+p = 200
+s = 3
 M = 1
 kfolds = 3
+h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 Sigma = toeplitz(0.5^(0:(p - 1)))
-lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
+lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 
 time = prop = rep(0, M)
 TPR = TNR = PPV = FDR = error = matrix(0, m, M)
@@ -111,10 +134,13 @@ TPR = TNR = PPV = FDR = error = matrix(0, m, M)
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  X = mvrnorm(n, rep(0, p), Sigma)
-  err = rt(n, 2)
+  #X = mvrnorm(n, rep(0, p), Sigma)
+  X = matrix(runif(n * p, -1, 1), n, p)
+  #err = rt(n, 2)
+  err = rnorm(n)
   ## Homo
-  beta = c(runif(s, 1, 1.5), rep(0, p - s))
+  #beta = c(runif(s, 1, 1.5), rep(0, p - s))
+  beta = c(0.5, 1, 1.5, rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
@@ -122,8 +148,10 @@ for (i in 1:M) {
   #beta = c(runif(s - 1, 1, 1.5), rep(0, p - s))
   #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
   #logT = X[, 1] * err + X[, -1] %*% beta
-  w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
-  logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
+  
+  #w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
+  #logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
+  logC = rnorm(n, 3, sqrt(17.25))
   censor = logT <= logC
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
@@ -131,18 +159,22 @@ for (i in 1:M) {
   folds = createFolds(censor, kfolds, FALSE)
 
   ## HDCQR-Lasso using quantreg
-  #start = Sys.time()
-  #fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
-  #ffit = rq(Y ~ X, method = "lasso")
-  #end = Sys.time()
+  beta.lasso = LASSO.fit(Y, X, tau = 0.1, lambda = lambdaSeq[20], intercept = TRUE, coef.cutoff = 0.0001)
+  fit = cv.rq.pen(X, Y, tau =.1, lambda = lambdaSeq, penalty = "LASSO", nfolds = 3)
   
-  #Y.hd = c(Y, 10^4, 10^4)
-  #censor.hd = c(censor, 1, 1)
-  #X.hd = rbind(X, rep(0, p), rep(0, p))
   
-  fit = cv.glmnet(X, Y, nlambda = 50)
-  s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 0.5), 0.1)
+  
+  start = Sys.time()
+  beta.cqr = cvCqr(X, censor, Y, lambdaSeq, tauSeq, kfolds, folds)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  test = exam(betaMat, beta.cqr)
+  TPR[, i] = test$TPR
+  TNR[, i] = test$TNR
+  PPV[, i] = test$PPV
+  FDR[, i] = test$FDR
+  error[, i] = test$error
+  RE[, i] = test$RE
   
   ## SCQR-Lasso
   start = Sys.time()

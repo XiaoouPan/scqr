@@ -59,6 +59,7 @@ arma::vec cmptLambdaMCP(const arma::vec& beta, const double lambda, const int p,
   return rst;
 }
 
+// Huberize least square regression for the lowest quantile tau_L
 // [[Rcpp::export]]
 double lossL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, const double n1, const double tau) {
   arma::vec res = Y - Z * beta;
@@ -120,23 +121,31 @@ double updateHuber(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta
   return 0.5 * n1 * rst;
 }*/
 
-// This is cumulative residual, not useful for cross-validation
 // [[Rcpp::export]]
-double calRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const int m) {
-  double res = 0.0;
-  arma::uvec idx = arma::find(censor == 1);
-  arma::mat Zcen = Z.rows(idx);
-  arma::mat Ycen = Y.rows(idx);
-  int ncen = Ycen.size();
-  for (int k = 0; k < m; k++) {
-    arma::vec resCen = Ycen - Zcen * betaHat.col(k);
-    double temp = 0.0;
-    for (int i = 0; i < ncen; i++) {
-      temp += resCen(i) >= 0 ? (resCen(i) * tauSeq(k)) : (resCen(i) * (tauSeq(k) - 1));
-    }
-    res += temp / ncen;
+arma::vec indicator(const arma::vec& x, const int n) {
+  arma::vec rst(n);
+  for (int i = 0; i < n; i++) {
+    rst(i) = x(i) >= 0 ? 1.0 : 0.0;
   }
-  return res / m;
+  return rst;
+}
+
+// [[Rcpp::export]]
+double calRes(const arma::mat& Z, const arma::vec& censor, const arma::vec& Y, const arma::mat& betaHat, const arma::vec& tauSeq, const arma::vec& HSeq,
+              const int m, const int n) {
+  arma::vec indi = indicator(Y - Z * betaHat.col(0), n);
+  arma::vec accu = tauSeq(0) * arma::ones(n);
+  arma::vec res = censor % (1 - indi) - tauSeq(0);
+  arma::vec dev = arma::sqrt(-2 * (res + censor % arma::log(censor - res)));
+  double rst = arma::mean(dev);
+  for (int i = 1; i < m; i++) {
+    accu += indi * (HSeq(i) - HSeq(i - 1));
+    indi = indicator(Y - Z * betaHat.col(i), n);
+    res = censor % (1 - indi) - accu;
+    dev = arma::sqrt(-2 * (res + censor % arma::log(censor - res)));
+    rst += arma::mean(dev);
+  }
+  return rst;
 }
 
 // [[Rcpp::export]]
@@ -595,26 +604,26 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
     arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
     arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
     for (int i = 0; i < nlambda; i++) {
-      arma::vec trainAccu = tauSeq(0) * (1 - trainCensor);
+      arma::vec trainAccu = tauSeq(0) * arma::ones(idxComp.size());
       betaHat = sqr0Lasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
       betaProc.col(0) = betaHat;
       for (int k = 1; k < m; k++) {
         arma::vec trainRes = trainY - trainZ * betaHat;
         trainAccu += arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
-        betaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+        betaHat = sqrkLasso(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
-  arma::vec accu = tauSeq(0) * (1 - censor);
+  arma::vec accu = tauSeq(0) * arma::ones(n);
   betaHat = sqr0Lasso(Z, censor, Y, lambdaSeq(cvIdx), accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkLasso(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkLasso(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
@@ -676,26 +685,26 @@ arma::mat cvSqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, co
     arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
     arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
     for (int i = 0; i < nlambda; i++) {
-      arma::vec trainAccu = tauSeq(0) * (1 - trainCensor);
+      arma::vec trainAccu = tauSeq(0) * arma::ones(idxComp.size());
       betaHat = sqr0Scad(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
       betaProc.col(0) = betaHat;
       for (int k = 1; k < m; k++) {
         arma::vec trainRes = trainY - trainZ * betaHat;
         trainAccu += arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
-        betaHat = sqrkScad(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+        betaHat = sqrkScad(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
-  arma::vec accu = tauSeq(0) * (1 - censor);
+  arma::vec accu = tauSeq(0) * arma::ones(n);
   betaHat = sqr0Scad(Z, censor, Y, lambdaSeq(cvIdx), accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkScad(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkScad(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
@@ -756,26 +765,26 @@ arma::mat cvSqrMcp(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
     arma::vec trainY = Y.rows(idxComp), testY = Y.rows(idx);
     arma::vec trainCensor = censor.rows(idxComp), testCensor = censor.rows(idx);
     for (int i = 0; i < nlambda; i++) {
-      arma::vec trainAccu = tauSeq(0) * (1 - trainCensor);
+      arma::vec trainAccu = tauSeq(0) * arma::ones(idxComp.size());
       betaHat = sqr0Mcp(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
       betaProc.col(0) = betaHat;
       for (int k = 1; k < m; k++) {
         arma::vec trainRes = trainY - trainZ * betaHat;
         trainAccu += arma::normcdf(trainRes * h1) * (HSeq(k) - HSeq(k - 1));
-        betaHat = sqrkMcp(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(k), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
+        betaHat = sqrkMcp(trainZ, trainCensor, trainY, lambdaSeq(i), trainAccu, betaHat, tauSeq(0), p, n1Train, h, h1, h2, phi0, gamma, epsilon, iteMax);
         betaProc.col(k) =  betaHat;
       }
-      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, m);
+      mse(i) += calRes(testZ, testCensor, testY, betaProc, tauSeq, HSeq, m, n);
     }
   }
   arma::uword cvIdx = arma::index_min(mse);
-  arma::vec accu = tauSeq(0) * (1 - censor);
+  arma::vec accu = tauSeq(0) * arma::ones(n);
   betaHat = sqr0Mcp(Z, censor, Y, lambdaSeq(cvIdx), accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkMcp(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(k), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkMcp(Z, censor, Y, lambdaSeq(cvIdx), accu, betaHat, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
