@@ -54,24 +54,23 @@ H = function(x) {
   return (-log(1 - x))
 }
 
-## The following function is modified based on Fei etal, 2021
-quantproc = function(y, x, delta, JJ, lambda, tol=1e-4){
-  
+## Code from Zheng Peng and He (2018)
+quantproc = function(y, x, delta, JJ, lambda, tol=1e-6){
   pp=dim(x)[2];                                                        #### the number of covariates
   tmpbeta=matrix(0,length(JJ),pp);                                     #### the coefficient matrix
   
   augy1=y[which(delta==1)];                                            #### the observed event time   
   augx1=x[which(delta==1),];                                           #### the corresponding covariates
-  augx2= -colSums(augx1)                                         #### the 2nd part in the objective function                        
+  augx2= -colSums(augx1)                                               #### the 2nd part in the objective function                        
   augy=c(augy1, 5000, 5000);
   
   sto_weights=matrix(0,length(JJ),dim(x)[1]);                          #### stochastic weights
   rproc=matrix(0,length(JJ),dim(x)[1]);                                #### the indictor (y>=x%*%betahat);
   sto_weights[1,]=JJ[1]*2;                                             #### the initial weight 2tau0
-  augx3=sto_weights[1,]%*%x;                                     #### the 3rd part in the objective function
+  augx3=sto_weights[1,]%*%x;                                           #### the 3rd part in the objective function
   augx=rbind(augx1,augx2,augx3);
-  #tmpb = coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=lambda))
-  tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=lambda))
+  tmpb = coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=lambda))
+  #tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=lambda))
   beta0 = tmpb*(abs(tmpb)>=tol)
   tmpbeta[1,]=beta0;
   rproc[1,]=1*(y>=x%*%beta0);                                          #### the initial indicator y>=x%*%betahat0;
