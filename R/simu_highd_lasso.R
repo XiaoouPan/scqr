@@ -5,6 +5,7 @@ library(MultiRNG)
 library(matrixStats)
 library(survival)
 library(caret)
+library(rqPen)
 library(tikzDevice)
 library(ggplot2)
 
@@ -52,38 +53,34 @@ H = function(x) {
   return (-log(1 - x))
 }
 
-## Code from Zheng Peng and He (2018)
-quantproc = function(y, x, delta, JJ, lambda, tol=1e-6){
-  pp=dim(x)[2];                                                        #### the number of covariates
-  tmpbeta=matrix(0,length(JJ),pp);                                     #### the coefficient matrix
+## High-dim CQR-Lasso, modified based on Zheng, Peng and He (2018)
+quantproc = function(y, x, delta, JJ, lambda, tol = 1e-6){
+  pp = dim(x)[2]                                                       
+  tmpbeta = matrix(0, length(JJ), pp)
+  Hseq = H(JJ)
   
-  augy1=y[which(delta==1)];                                            #### the observed event time   
-  augx1=x[which(delta==1),];                                           #### the corresponding covariates
-  augx2= -colSums(augx1)                                               #### the 2nd part in the objective function                        
-  augy=c(augy1, 5000, 5000);
+  augy1 = y[which(delta == 1)]                                           
+  augx1 = x[which(delta == 1), ]                                          
+  augx2 = -colSums(augx1)                                                                 
+  augy = c(augy1, 1000, 1000)
   
-  sto_weights=matrix(0,length(JJ),dim(x)[1]);                          #### stochastic weights
-  rproc=matrix(0,length(JJ),dim(x)[1]);                                #### the indictor (y>=x%*%betahat);
-  sto_weights[1,]=JJ[1]*2;                                             #### the initial weight 2tau0
-  augx3=sto_weights[1,]%*%x;                                           #### the 3rd part in the objective function
-  augx=rbind(augx1,augx2,augx3);
-  tmpb = coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=lambda))
-  #tmpb = coef(rq(y~0+x,method="lasso",tau=JJ[1],lambda=lambda))
-  beta0 = tmpb*(abs(tmpb)>=tol)
-  tmpbeta[1,]=beta0;
-  rproc[1,]=1*(y>=x%*%beta0);                                          #### the initial indicator y>=x%*%betahat0;
-  
-  for(s in 2:length(JJ)){
-    tuning=lambda
-    Hm = H(JJ[s])-H(JJ[s-1]);                                        #### H(tau[s])-H(tau[s-1]) 
-    sto_weights[s,]=sto_weights[s-1,]+2*Hm*rproc[s-1,];            #### update the stochastic weight for tau[s]
-    augx3=sto_weights[s,]%*%x;                                     #### the 3rd part in the objective function
-    augx=rbind(augx1,augx2,augx3);
-    tmpb=coef(rq(augy~0+augx,method="lasso",tau=0.5,lambda=tuning));  #### quantile fit at tau[s];
-    tmpbeta[s,]=tmpb*(abs(tmpb)>=tol);                             #### hard threshholding;
-    rproc[s,] = 1*(y>x%*%tmpbeta[s,]);                               #### update the indicator y>=x%*%betahat at tau[s];	
+  sto_weights = matrix(0, length(JJ), dim(x)[1])                   
+  rproc = matrix(0, length(JJ), dim(x)[1])                           
+  sto_weights[1, ] = JJ[1] * 2                                            
+  augx3 = sto_weights[1, ] %*% x                                       
+  augx = rbind(augx1, augx2, augx3)
+  beta0 = LASSO.fit(augy, augx, tau = 0.5, lambda = lambda, intercept = FALSE, coef.cutoff = 0.0001, weights = NULL)
+  tmpbeta[1, ] = beta0
+  rproc[1, ] = 1 * (y >= x %*% beta0)                                         
+  for(s in 2:length(JJ)) {
+    Hm = Hseq[s] - Hseq[s - 1]                                 
+    sto_weights[s, ] = sto_weights[s - 1, ] + 2 * Hm * rproc[s - 1, ]           
+    augx3 = sto_weights[s, ] %*% x                                    
+    augx = rbind(augx1, augx2, augx3)
+    tmpbeta[s,] = LASSO.fit(augy, augx, tau = 0.5, lambda = lambda, intercept = FALSE, coef.cutoff = 0.0001, weights = NULL)
+    rproc[s, ] = 1*( y > x %*% tmpbeta[s, ])                              
   }
-  return (t(tmpbeta));
+  return (t(tmpbeta))
 }
 
 cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
@@ -112,10 +109,10 @@ cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
 
 
 #### High-dim quantile process with fixed scale
-n = 400
-p = 1000
-s = 10
-M = 50
+n = 40
+p = 50
+s = 1
+M = 1
 kfolds = 3
 h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
