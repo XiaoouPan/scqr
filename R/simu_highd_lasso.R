@@ -29,6 +29,13 @@ exam = function(beta, beta.hat) {
   return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err))
 }
 
+getSet = function(beta.hat, m) {
+  active = 1 * (beta.hat[-1, ] != 0)
+  uniActive = which(rowMaxs(active) != 0)
+  voteActive = which(rowSums(active) > 0.5 * m)
+  return (list("union" = uniActive, "vote" = voteActive))
+}
+
 calRes = function(Z, censor, Y, beta.hat, tauSeq, HSeq) {
   m = length(tauSeq)
   n = length(Y)
@@ -109,10 +116,10 @@ cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
 
 
 #### High-dim quantile process with fixed scale
-n = 40
-p = 50
-s = 1
-M = 1
+n = 400
+p = 1000
+s = 10
+M = 500
 kfolds = 3
 h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
@@ -180,8 +187,8 @@ for (i in 1:M) {
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
-mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero/lasso/")
+mtc.lasso = as.matrix(read.csv("mtc_scqr.csv")[, -1])
 mtc.scad = as.matrix(cbind(read.csv("mtc_scad1.csv")[, 2:101], 
                            read.csv("mtc_scad2.csv")[, 102:201],
                            read.csv("mtc_scad3.csv")[, 202:301],
@@ -193,12 +200,11 @@ mtc.mcp = as.matrix(cbind(read.csv("mtc_mcp1.csv")[, 2:101],
                           read.csv("mtc_mcp4.csv")[, 302:401],
                           read.csv("mtc_mcp5.csv")[, 402:501]))
 
-ind1 = 1:11
-ind2 = 12:22
-ind3 = 23:33
-ind4 = 34:44
-ind5 = 45:55
-ind6 = 56:66
+ind1 = 1:13
+ind2 = 14:26
+ind3 = 27:39
+ind4 = 40:52
+ind5 = 53:65
 
 ### Dataframe construction
 TPR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
@@ -206,9 +212,8 @@ TNR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind2], rowMeans(mtc.scad, na.rm = TRUE
 PPV = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind3], rowMeans(mtc.scad, na.rm = TRUE)[ind3], rowMeans(mtc.mcp, na.rm = TRUE)[ind3])
 FDR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind4], rowMeans(mtc.scad, na.rm = TRUE)[ind4], rowMeans(mtc.mcp, na.rm = TRUE)[ind4])
 error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind5], rowMeans(mtc.scad, na.rm = TRUE)[ind5], rowMeans(mtc.mcp, na.rm = TRUE)[ind5])
-RE = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind6], rowMeans(mtc.scad, na.rm = TRUE)[ind6], rowMeans(mtc.mcp, na.rm = TRUE)[ind6])
-dat = as.data.frame(cbind(TPR, TNR, PPV, FDR, error, RE))
-colnames(dat) = c("TPR", "TNR", "PPV", "FDR", "error", "RE")
+dat = as.data.frame(cbind(TPR, TNR, PPV, FDR, error))
+colnames(dat) = c("TPR", "TNR", "PPV", "FDR", "error")
 dat$tau = rep(tauSeq, 3)
 dat$type = c(rep("\\texttt{Lasso}", nTau), rep("\\texttt{SCAD}", nTau), rep("\\texttt{MCP}", nTau))
 dat$type = factor(dat$type, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
