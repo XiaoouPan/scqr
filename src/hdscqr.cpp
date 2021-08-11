@@ -133,43 +133,6 @@ double updateL2(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, a
   return 0.5 * n1 * rst;
 }
 
-/*// [[Rcpp::export]]
-double mad(const arma::vec& x) {
-  return 1.482602 * arma::median(arma::abs(x - arma::median(x)));
-}
-
-// [[Rcpp::export]]
-double lossHuber(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, const double n1, const double tau, const double robust) {
-  arma::vec res = Y - Z * beta;
-  double rst = 0.0;
-  for (int i = 0; i < Y.size(); i++) {
-    if (res(i) >= robust) {
-      rst += tau * (robust * res(i) - 0.5 * robust * robust);
-    } else if (res(i) >= 0) {
-      rst += 0.5 * tau * res(i) * res(i);
-    } else if (res(i) >= -robust) {
-      rst += 0.5 * (1 - tau) * res(i) * res(i);
-    } else {
-      rst += (tau - 1) * (robust * res(i) + 0.5 * robust * robust);
-    }
-  }
-  return n1 * rst;
-}
-
-// [[Rcpp::export]]
-double updateHuber(const arma::mat& Z, const arma::vec& Y, const arma::vec& beta, arma::vec& grad, const double n1, const double tau, const double robust) {
-  arma::vec res = Y - Z * beta;
-  double rst = 0.0;
-  grad = arma::zeros(grad.size());
-  for (int i = 0; i < Y.size(); i++) {
-    double temp = res(i) > 0 ? tau : (1 - tau);
-    grad -= temp * res(i) * Z.row(i).t();
-    rst += temp * res(i) * res(i);
-  }
-  grad *= n1;
-  return 0.5 * n1 * rst;
-}*/
-
 // [[Rcpp::export]]
 arma::vec indicator(const arma::vec& x, const int n) {
   arma::vec rst(n);
