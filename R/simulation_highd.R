@@ -12,8 +12,13 @@ library(ggplot2)
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-exam = function(trueSig, selectSig, beta.hat, beta) {
+exam = function(trueSig, selectSet, beta.est, beta) {
   m = ncol(beta)
+  p = length(trueSig)
+  beta.hat = matrix(0, p, m)
+  beta.hat[selectSet, ] = beta.est[-1, ]
+  selectSig = rep(0, p)
+  selectSig[selectSet] = 1
   TPR = sum(trueSig != 0 & selectSig != 0) / sum(trueSig != 0)
   TNR = sum(trueSig == 0 & selectSig == 0) / sum(trueSig == 0)
   FDR = 0
@@ -24,7 +29,7 @@ exam = function(trueSig, selectSig, beta.hat, beta) {
   for (i in 1:m) {
     err = err + norm(beta[, i] - beta.hat[, i], "2")
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err / m))
+  return (list("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = err / m))
 }
 
 getSet = function(beta.hat, m) {
@@ -35,87 +40,62 @@ getSet = function(beta.hat, m) {
 }
 
 
-
-
 #### Quantile process with fixed scale, hard to visualize
-n = 80
-p = 20
-s = 2
+n = 50
+p = 200
+s = 1
 M = 1
 kfolds = 3
-tauSeq = seq(0.2, 0.7, by = 0.05)
+h = (log(p) / n)^(1/4)
+tauSeq = seq(0.1, 0.7, by = 0.05)
 m = length(tauSeq)
-grid = seq(0.2, 0.75, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-Sigma = getSigma(p)
-lambdaSeq = exp(seq(log(0.02), log(0.3), length.out = 50))
+Sigma = toeplitz(0.5^(0:(p - 1)))
+lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
+trueSig = c(rep(1, s), rep(0, p - s))
 
 time = prop = rep(0, M)
-TPR = TNR = PPV = FDR = error = RE = matrix(0, m, M)
+TPR = TNR = FDR = error = rep(0, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  #X = sqrt(12) * draw.d.variate.uniform(n, p, Sigma) - sqrt(3)
   X = mvrnorm(n, rep(0, p), Sigma)
-  #Sigma = getSigma(45)
-  #X = cbind(mvrnorm(n, rep(0, 45), Sigma), 4 * draw.d.variate.uniform(n, 45, Sigma) - 2, matrix(rbinom(10 * n, 1, c(0.5, 0.5)), n, 10))
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 1.5, 2), rep(0, p - s))
+  beta = c(runif(s, 1, 1.5), rep(0, p - s))
   betaMat = rbind(beta0, matrix(beta, p, nTau))
   logT = X %*% beta + err
   ## Hetero
   #X[, 1] = abs(X[, 1])
-  #beta = c(runif(s - 1, 1.5, 2), rep(0, p - s))
+  #beta = c(runif(s - 1, 1, 1.5), rep(0, p - s))
   #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
   #logT = X[, 1] * err + X[, -1] %*% beta
+  
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
-  response = Surv(Y, censor, type = "right")
   folds = createFolds(censor, kfolds, FALSE)
-  ##  Check if there are enough test samples
-  if (sum(censor[folds == 1] == 1) <= 5 | sum(censor[folds == 2] == 1) <= 5 | sum(censor[folds == 3] == 1) <= 5) {
-    setTxtProgressBar(pb, i / M)
-    next
-  }
-  
-  ## Peng and Huang on the oracle set
-  list = crq(response ~ X[, 1:s], method = "PengHuang", grid = grid)
-  beta.oracle = list$sol[2:(s + 2), ]
-  tt = ncol(beta.oracle)
-  beta.oracle = rbind(beta.oracle, matrix(0, p - s, tt))
-  
-  ## HDCQR-Lasso using quantreg
-  #start = Sys.time()
-  #fit = rq.fit.lasso(X, Y, tau = 0.5, lambda = 0.05)
-  #ffit = rq(Y ~ X, method = "lasso")
-  #end = Sys.time()
-  
-  #Y.hd = c(Y, 10^4, 10^4)
-  #censor.hd = c(censor, 1, 1)
-  #X.hd = rbind(X, rep(0, p), rep(0, p))
-  
-  fit = cv.glmnet(X, Y, nlambda = 50)
-  s.hat = sum(as.numeric(coef(fit, s = fit$lambda.min)) != 0)
-  h = max(min((s.hat * sqrt(log(p) / n) + (s.hat * log(p) / n)^(0.25)) / 2, 0.5), 0.1)
   
   ## SCQR-Lasso
   start = Sys.time()
   beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.lasso, beta.oracle)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
+  activeSet = getSet(beta.lasso, m)
+  uniSet = activeSet$union
+  voteSet = activeSet$vote
+  Xunion = X[, uniSet, drop = FALSE]
+  Xvote = X[, voteSet, drop = FALSE]
+  beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+  test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+  TPR[i] = test$TPR
+  TNR[i] = test$TNR
+  FDR[i] = test$FDR
+  error[i] = test$error
   
   ## SCQR-SCAD
   start = Sys.time()

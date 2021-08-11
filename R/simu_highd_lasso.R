@@ -116,10 +116,10 @@ cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
 
 
 #### High-dim quantile process with fixed scale
-n = 400
-p = 1000
-s = 10
-M = 500
+n = 50
+p = 200
+s = 1
+M = 1
 kfolds = 3
 h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
@@ -152,7 +152,6 @@ for (i in 1:M) {
   censor = logT <= logC
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
-  response = Surv(Y, censor, type = "right")
   folds = createFolds(censor, kfolds, FALSE)
 
   ## HDCQR-Lasso using quantreg
