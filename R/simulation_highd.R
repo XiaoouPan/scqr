@@ -41,12 +41,12 @@ getSet = function(beta.hat, m) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 50
-p = 200
-s = 1
-M = 1
+n = 400
+p = 1000
+s = 10
+M = 500
 kfolds = 3
-h = (log(p) / n)^(1/4)
+h = 0.5 * (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
@@ -56,7 +56,8 @@ lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 trueSig = c(rep(1, s), rep(0, p - s))
 
 time = prop = rep(0, M)
-TPR = TNR = FDR = error = rep(0, M)
+TPR1 = TNR1 = FDR1 = error1 = rep(NA, M)
+TPR2 = TNR2 = FDR2 = error2 = rep(NA, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -82,7 +83,7 @@ for (i in 1:M) {
   
   ## SCQR-Lasso
   start = Sys.time()
-  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  beta.lasso = cvSqrLassoGrow(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
   activeSet = getSet(beta.lasso, m)
@@ -90,38 +91,84 @@ for (i in 1:M) {
   voteSet = activeSet$vote
   Xunion = X[, uniSet, drop = FALSE]
   Xvote = X[, voteSet, drop = FALSE]
-  beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
-  test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
-  TPR[i] = test$TPR
-  TNR[i] = test$TNR
-  FDR[i] = test$FDR
-  error[i] = test$error
+  ## scqr on the union set
+  if (length(uniSet) > 0) {
+    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+    TPR1[i] = test$TPR
+    TNR1[i] = test$TNR
+    FDR1[i] = test$FDR
+    error1[i] = test$error
+  }
+  ## scqr on the majority vote set
+  if (length(voteSet) > 0) {
+    beta.vote = scqrGauss(Xvote, Y, censor, tauSeq)
+    test = exam(trueSig, voteSet, beta.vote, betaMat[-1, ])
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+    error2[i] = test$error
+  }
+  
   
   ## SCQR-SCAD
   start = Sys.time()
-  beta.scad = cvSqrScad(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  beta.scad = cvSqrScadGrow(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.scad, beta.oracle)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
+  activeSet = getSet(beta.scad, m)
+  uniSet = activeSet$union
+  voteSet = activeSet$vote
+  Xunion = X[, uniSet, drop = FALSE]
+  Xvote = X[, voteSet, drop = FALSE]
+  ## scqr on the union set
+  if (length(uniSet) > 0) {
+    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+    TPR1[i] = test$TPR
+    TNR1[i] = test$TNR
+    FDR1[i] = test$FDR
+    error1[i] = test$error
+  }
+  ## scqr on the majority vote set
+  if (length(voteSet) > 0) {
+    beta.vote = scqrGauss(Xvote, Y, censor, tauSeq)
+    test = exam(trueSig, voteSet, beta.vote, betaMat[-1, ])
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+    error2[i] = test$error
+  }
+  
   
   ## SCQR-MCP
-  #start = Sys.time()
-  #beta.mcp = cvSqrMcp(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  #end = Sys.time()
-  #time[i] = as.numeric(difftime(end, start, units = "secs"))
-  #test = exam(betaMat, beta.mcp, beta.oracle)
-  #TPR[, i] = test$TPR
-  #TNR[, i] = test$TNR
-  #PPV[, i] = test$PPV
-  #FDR[, i] = test$FDR
-  #error[, i] = test$error
-  #RE[, i] = test$RE
+  start = Sys.time()
+  beta.mcp = cvSqrMcpGrow(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  activeSet = getSet(beta.mcp, m)
+  uniSet = activeSet$union
+  voteSet = activeSet$vote
+  Xunion = X[, uniSet, drop = FALSE]
+  Xvote = X[, voteSet, drop = FALSE]
+  ## scqr on the union set
+  if (length(uniSet) > 0) {
+    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+    TPR1[i] = test$TPR
+    TNR1[i] = test$TNR
+    FDR1[i] = test$FDR
+    error1[i] = test$error
+  }
+  ## scqr on the majority vote set
+  if (length(voteSet) > 0) {
+    beta.vote = scqrGauss(Xvote, Y, censor, tauSeq)
+    test = exam(trueSig, voteSet, beta.vote, betaMat[-1, ])
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+    error2[i] = test$error
+  }
   
   setTxtProgressBar(pb, i / M)
 }
