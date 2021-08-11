@@ -4,47 +4,37 @@ library(MASS)
 library(MultiRNG)
 library(matrixStats)
 library(survival)
+library(caret)
+library(rqPen)
 library(tikzDevice)
 library(ggplot2)
-library(glmnet)
-library(caret)
 
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-
-getSigma = function(p) {
-  sig = diag(p)
-  for (i in 1:(p - 1)) {
-    for (j in (i + 1):p) {
-      sig[i, j] = sig[j, i] = 0.5^(j - i)
-    }
-  }
-  return (sig)
-}
-
-exam = function(beta, beta.hat, beta.oracle) {
+exam = function(trueSig, selectSig, beta.hat, beta) {
   m = ncol(beta)
-  TPR = TNR = PPV = FDR = err = rep(0, m)
+  TPR = sum(trueSig != 0 & selectSig != 0) / sum(trueSig != 0)
+  TNR = sum(trueSig == 0 & selectSig == 0) / sum(trueSig == 0)
+  FDR = 0
+  if (sum(selectSig != 0) > 0) {
+    FDR = sum(trueSig == 0 & selectSig != 0) / sum(selectSig != 0)
+  }
+  err = 0
   for (i in 1:m) {
-    TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
-    TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
-    PPV[i] = 0
-    FDR[i] = 0
-    if (sum(beta.hat[-1, i] != 0) > 0) {
-      PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
-      FDR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
-    }
-    err[i] = norm(beta[, i] - beta.hat[, i], "2")
+    err = err + norm(beta[, i] - beta.hat[, i], "2")
   }
-  tt = ncol(beta.oracle)
-  RE = rep(0, tt)
-  for (i in 1:tt) {
-    err.ora = norm(beta[, i] - beta.oracle[, i], "2")
-    RE[i] = err[i] / err.ora
-  }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err, "RE" = RE))
+  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err / m))
 }
+
+getSet = function(beta.hat, m) {
+  active = 1 * (beta.hat[-1, ] != 0)
+  uniActive = which(rowMaxs(active) != 0)
+  voteActive = which(rowSums(active) > 0.5 * m)
+  return (list("union" = uniActive, "vote" = voteActive))
+}
+
+
 
 
 #### Quantile process with fixed scale, hard to visualize
