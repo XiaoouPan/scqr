@@ -176,25 +176,12 @@ for (i in 1:M) {
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/homo")
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero")
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
-mtc.scad = as.matrix(cbind(read.csv("mtc_scad1.csv")[, 2:101], 
-                           read.csv("mtc_scad2.csv")[, 102:201],
-                           read.csv("mtc_scad3.csv")[, 202:301],
-                           read.csv("mtc_scad4.csv")[, 302:401],
-                           read.csv("mtc_scad5.csv")[, 402:501]))
-mtc.mcp = as.matrix(cbind(read.csv("mtc_mcp1.csv")[, 2:101],
-                          read.csv("mtc_mcp2.csv")[, 102:201],
-                          read.csv("mtc_mcp3.csv")[, 202:301],
-                          read.csv("mtc_mcp4.csv")[, 302:401],
-                          read.csv("mtc_mcp5.csv")[, 402:501]))
+mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
+mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
 
-ind1 = 1:11
-ind2 = 12:22
-ind3 = 23:33
-ind4 = 34:44
-ind5 = 45:55
-ind6 = 56:66
+rbind(rowMeans(mtc.lasso, na.rm = TRUE), rowMeans(mtc.scad, na.rm = TRUE), rowMeans(mtc.mcp, na.rm = TRUE))
 
 ### Dataframe construction
 TPR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
