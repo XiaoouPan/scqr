@@ -670,7 +670,7 @@ arma::vec sqrkMcp(const arma::mat& Z, const arma::vec& censor, const arma::vec& 
   return betaNew;
 }
 
-// SCQR process with a particular lambda
+// SCQR process with a dilating lambda
 // [[Rcpp::export]]
 arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
                     const double phi0 = 0.1, const double gamma = 1.2, const double epsilon = 0.01, const int iteMax = 500) {
