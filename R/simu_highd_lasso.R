@@ -69,9 +69,9 @@ quantproc = function(y, x, delta, JJ, lambda, tol = 1e-4) {
 
 
 #### High-dim quantile process with fixed scale
-n = 50
-p = 200
-s = 1
+n = 400
+p = 1000
+s = 10
 M = 1
 kfolds = 3
 h = (log(p) / n)^(1/4)
@@ -113,22 +113,6 @@ for (i in 1:M) {
   ## SCQR-Lasso
   scqr.fit = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   lambda0 = scqr.fit$lambda0
-  beta.lasso = scqr.fit$beta
-  activeSet = getSet(beta.lasso, m)
-  uniSet = activeSet$union
-  voteSet = activeSet$vote
-  ## scqr on the union set
-  if (length(uniSet) > 0) {
-    TPR1[i] = test$TPR
-    TNR1[i] = test$TNR
-    FDR1[i] = test$FDR
-  }
-  ## scqr on the majority vote set
-  if (length(voteSet) > 0) {
-    TPR2[i] = test$TPR
-    TNR2[i] = test$TNR
-    FDR2[i] = test$FDR
-  }
   start = Sys.time()
   beta.lasso = SqrLasso(X, censor, Y, lambda0, tauSeq, h)
   end = Sys.time()
@@ -140,11 +124,24 @@ for (i in 1:M) {
   start = Sys.time()
   beta.cqr = quantproc(Y, Z, censor, tauSeq, lambda0)
   end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  time2[i] = as.numeric(difftime(end, start, units = "secs"))
   activeSet = getSet(beta.cqr, m)
   uniSet = activeSet$union
   voteSet = activeSet$vote
-
+  ## scqr on the union set
+  if (length(uniSet) > 0) {
+    test = exam(trueSig, uniSet)
+    TPR1[i] = test$TPR
+    TNR1[i] = test$TNR
+    FDR1[i] = test$FDR
+  }
+  ## scqr on the majority vote set
+  if (length(voteSet) > 0) {
+    test = exam(trueSig, voteSet)
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+  }
 
   setTxtProgressBar(pb, i / M)
 }
