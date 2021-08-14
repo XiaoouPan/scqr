@@ -12,11 +12,8 @@ library(ggplot2)
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-exam = function(trueSig, selectSet, beta.est, beta) {
-  m = ncol(beta)
+exam = function(trueSig, selectSet) {
   p = length(trueSig)
-  beta.hat = matrix(0, p, m)
-  beta.hat[selectSet, ] = beta.est[-1, ]
   selectSig = rep(0, p)
   selectSig[selectSet] = 1
   TPR = sum(trueSig != 0 & selectSig != 0) / sum(trueSig != 0)
@@ -25,11 +22,7 @@ exam = function(trueSig, selectSet, beta.est, beta) {
   if (sum(selectSig != 0) > 0) {
     FDR = sum(trueSig == 0 & selectSig != 0) / sum(selectSig != 0)
   }
-  err = 0
-  for (i in 1:m) {
-    err = err + norm(beta[, i] - beta.hat[, i], "2")
-  }
-  return (list("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = err / m))
+  return (list("TPR" = TPR, "TNR" = TNR, "FDR" = FDR))
 }
 
 getSet = function(beta.hat, m) {
@@ -44,7 +37,7 @@ H = function(x) {
 }
 
 ## High-dim CQR-Lasso, modified based on Zheng, Peng and He (2018)
-quantproc = function(y, x, delta, JJ, lambda, tol = 1e-6){
+quantproc = function(y, x, delta, JJ, lambda, tol = 1e-4) {
   pp = dim(x)[2]                                                       
   tmpbeta = matrix(0, length(JJ), pp)
   Hseq = H(JJ)
@@ -74,6 +67,7 @@ quantproc = function(y, x, delta, JJ, lambda, tol = 1e-6){
   return (t(tmpbeta))
 }
 
+
 #### High-dim quantile process with fixed scale
 n = 50
 p = 200
@@ -82,14 +76,17 @@ M = 1
 kfolds = 3
 h = (log(p) / n)^(1/4)
 tauSeq = seq(0.1, 0.7, by = 0.05)
+grid = seq(0.1, 0.75, by = 0.05)
 m = length(tauSeq)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 Sigma = toeplitz(0.5^(0:(p - 1)))
 lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
+trueSig = c(rep(1, s), rep(0, p - s))
 
 time = prop = rep(0, M)
-TPR = TNR = PPV = FDR = error = matrix(0, m, M)
+TPR1 = TNR1 = FDR1 = error1 = rep(NA, M)
+TPR2 = TNR2 = FDR2 = error2 = rep(NA, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -113,47 +110,49 @@ for (i in 1:M) {
   Y = pmin(logT, logC)
   folds = createFolds(censor, kfolds, FALSE)
   
+  ## SCQR-Lasso
   scqr.fit = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   lambda0 = scqr.fit$lambda0
-  beta.lasso = scqr.fit$beeta.lasso
-  test = exam(betaMat, beta.lasso)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
+  beta.lasso = scqr.fit$beta
+  activeSet = getSet(beta.lasso, m)
+  uniSet = activeSet$union
+  voteSet = activeSet$vote
+  Xunion = X[, uniSet, drop = FALSE]
+  Xvote = X[, voteSet, drop = FALSE]
+  ## scqr on the union set
+  if (length(uniSet) > 0) {
+    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+    TPR1[i] = test$TPR
+    TNR1[i] = test$TNR
+    FDR1[i] = test$FDR
+    error1[i] = test$error
+  }
+  ## scqr on the majority vote set
+  if (length(voteSet) > 0) {
+    beta.vote = scqrGauss(Xvote, Y, censor, tauSeq)
+    test = exam(trueSig, voteSet, beta.vote, betaMat[-1, ])
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+    error2[i] = test$error
+  }
   start = Sys.time()
-  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  beta.lasso = SqrLasso(X, censor, Y, lambda0, tauSeq, h)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
   
 
-  ## HDCQR-Lasso using quantreg
+  ## HDCQR-Lasso using rqPen
+  Z = cbind(1, X)
   start = Sys.time()
-  beta.cqr = cvCqr(X, censor, Y, lambdaSeq, tauSeq, kfolds, folds)
+  beta.cqr = quantproc(Y, Z, censor, tauSeq, lambda0)
   end = Sys.time()
   time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.cqr)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
-  
-  ## SCQR-Lasso
-  start = Sys.time()
-  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
-  end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
-  test = exam(betaMat, beta.lasso)
-  TPR[, i] = test$TPR
-  TNR[, i] = test$TNR
-  PPV[, i] = test$PPV
-  FDR[, i] = test$FDR
-  error[, i] = test$error
-  RE[, i] = test$RE
+  activeSet = getSet(beta.cqr, m)
+  uniSet = activeSet$union
+  voteSet = activeSet$vote
+
 
   setTxtProgressBar(pb, i / M)
 }
