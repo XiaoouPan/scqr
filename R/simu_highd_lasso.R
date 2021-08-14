@@ -84,7 +84,7 @@ Sigma = toeplitz(0.5^(0:(p - 1)))
 lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 trueSig = c(rep(1, s), rep(0, p - s))
 
-time = prop = rep(0, M)
+time1 = time2 = prop = rep(0, M)
 TPR1 = TNR1 = FDR1 = error1 = rep(NA, M)
 TPR2 = TNR2 = FDR2 = error2 = rep(NA, M)
 
@@ -117,30 +117,22 @@ for (i in 1:M) {
   activeSet = getSet(beta.lasso, m)
   uniSet = activeSet$union
   voteSet = activeSet$vote
-  Xunion = X[, uniSet, drop = FALSE]
-  Xvote = X[, voteSet, drop = FALSE]
   ## scqr on the union set
   if (length(uniSet) > 0) {
-    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
-    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
     TPR1[i] = test$TPR
     TNR1[i] = test$TNR
     FDR1[i] = test$FDR
-    error1[i] = test$error
   }
   ## scqr on the majority vote set
   if (length(voteSet) > 0) {
-    beta.vote = scqrGauss(Xvote, Y, censor, tauSeq)
-    test = exam(trueSig, voteSet, beta.vote, betaMat[-1, ])
     TPR2[i] = test$TPR
     TNR2[i] = test$TNR
     FDR2[i] = test$FDR
-    error2[i] = test$error
   }
   start = Sys.time()
   beta.lasso = SqrLasso(X, censor, Y, lambda0, tauSeq, h)
   end = Sys.time()
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  time1[i] = as.numeric(difftime(end, start, units = "secs"))
   
 
   ## HDCQR-Lasso using rqPen
