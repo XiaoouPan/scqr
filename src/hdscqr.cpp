@@ -687,10 +687,11 @@ arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
   arma::vec betaHat = sqr0Lasso(Z, censor, Y, lambda, accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   arma::vec HSeq = getH(tauSeq);
+  arma::vec dilate = 1 + arma::log((1 - tauSeq(0)) / (1 - tauSeq));
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkLasso(Z, censor, Y, lambda, accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkLasso(Z, censor, Y, lambda * dilate(k), accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
@@ -699,9 +700,9 @@ arma::mat SqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
 }
 
 // [[Rcpp::export]]
-arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, const arma::vec& tauSeq, 
-                     const int kfolds, const double h, const double phi0 = 0.1, const double gamma = 1.2, const double epsilon = 0.01, 
-                     const int iteMax = 500) {
+Rcpp::List cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, const arma::vec& tauSeq, 
+                      const int kfolds, const double h, const double phi0 = 0.1, const double gamma = 1.2, const double epsilon = 0.01, 
+                      const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols, nlambda = lambdaSeq.size();
   const int m = tauSeq.size();
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);
@@ -749,13 +750,13 @@ arma::mat cvSqrLasso(const arma::mat& X, const arma::vec& censor, arma::vec Y, c
   }
   betaProc.rows(1, p).each_col() %= sx1;
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return betaProc;
+  return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("lambda0") = lambdaSeq(cvIdx));
 }
 
 // [[Rcpp::export]]
-arma::mat cvSqrLassoGrow(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, 
-                         const arma::vec& tauSeq, const int kfolds, const double h, const double phi0 = 0.1, const double gamma = 1.2, 
-                         const double epsilon = 0.01, const int iteMax = 500) {
+Rcpp::List cvSqrLassoGrow(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, 
+                          const arma::vec& tauSeq, const int kfolds, const double h, const double phi0 = 0.1, const double gamma = 1.2, 
+                          const double epsilon = 0.01, const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols, nlambda = lambdaSeq.size();
   const int m = tauSeq.size();
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);
@@ -806,7 +807,7 @@ arma::mat cvSqrLassoGrow(const arma::mat& X, const arma::vec& censor, arma::vec 
   }
   betaProc.rows(1, p).each_col() %= sx1;
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return betaProc;
+  return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("lambda0") = lambdaSeq(cvIdx));
 }
 
 // [[Rcpp::export]]
@@ -1033,7 +1034,7 @@ arma::mat cvSqrMcp(const arma::mat& X, const arma::vec& censor, arma::vec Y, con
 // [[Rcpp::export]]
 arma::mat cvSqrMcpGrow(const arma::mat& X, const arma::vec& censor, arma::vec Y, const arma::vec& lambdaSeq, const arma::vec& folds, 
                        const arma::vec& tauSeq, const int kfolds, const double h, const double phi0 = 0.1, const double gamma = 1.2, 
-                      const double epsilon = 0.01, const int iteMax = 500) {
+                       const double epsilon = 0.01, const int iteMax = 500) {
   const int n = X.n_rows, p = X.n_cols, nlambda = lambdaSeq.size();
   const int m = tauSeq.size();
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);

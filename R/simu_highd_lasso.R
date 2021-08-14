@@ -12,21 +12,24 @@ library(ggplot2)
 rm(list = ls())
 Rcpp::sourceCpp("src/hdscqr.cpp")
 
-exam = function(beta, beta.hat) {
+exam = function(trueSig, selectSet, beta.est, beta) {
   m = ncol(beta)
-  TPR = TNR = PPV = FDR = err = rep(0, m)
-  for (i in 1:m) {
-    TPR[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta[-1, i] != 0)
-    TNR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] == 0) / sum(beta[-1, i] == 0)
-    PPV[i] = 0
-    FDR[i] = 0
-    if (sum(beta.hat[-1, i] != 0) > 0) {
-      PPV[i] = sum(beta[-1, i] != 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
-      FDR[i] = sum(beta[-1, i] == 0 & beta.hat[-1, i] != 0) / sum(beta.hat[-1, i] != 0)
-    }
-    err[i] = norm(beta[, i] - beta.hat[, i], "2")
+  p = length(trueSig)
+  beta.hat = matrix(0, p, m)
+  beta.hat[selectSet, ] = beta.est[-1, ]
+  selectSig = rep(0, p)
+  selectSig[selectSet] = 1
+  TPR = sum(trueSig != 0 & selectSig != 0) / sum(trueSig != 0)
+  TNR = sum(trueSig == 0 & selectSig == 0) / sum(trueSig == 0)
+  FDR = 0
+  if (sum(selectSig != 0) > 0) {
+    FDR = sum(trueSig == 0 & selectSig != 0) / sum(selectSig != 0)
   }
-  return (list("TPR" = TPR, "TNR" = TNR, "PPV" = PPV, "FDR" = FDR, "error" = err))
+  err = 0
+  for (i in 1:m) {
+    err = err + norm(beta[, i] - beta.hat[, i], "2")
+  }
+  return (list("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = err / m))
 }
 
 getSet = function(beta.hat, m) {
@@ -34,26 +37,6 @@ getSet = function(beta.hat, m) {
   uniActive = which(rowMaxs(active) != 0)
   voteActive = which(rowSums(active) > 0.5 * m)
   return (list("union" = uniActive, "vote" = voteActive))
-}
-
-calRes = function(Z, censor, Y, beta.hat, tauSeq, HSeq) {
-  m = length(tauSeq)
-  n = length(Y)
-  rst = 0
-  indi = 1 * (Y >= Z %*% beta.hat[, 1])
-  accu = rep(tauSeq[1], n)
-  res = censor * (1 - indi) - tauSeq[1]
-  dev = sqrt(-2 * (res + censor * log(censor - res)))
-  rst = rst + mean(dev)
-  for (i in 2:m) {
-    Hgap = HSeq[i] - HSeq[i - 1]
-    accu = accu + indi * Hgap
-    indi = 1 * (Y >= Z %*% beta.hat[, i])
-    res = censor * (1 - indi) - accu
-    dev = sqrt(-2 * (res + censor * log(censor - res)))
-    rst = rst + mean(dev)
-  }
-  return (rst)
 }
 
 H = function(x) {
@@ -65,6 +48,7 @@ quantproc = function(y, x, delta, JJ, lambda, tol = 1e-6){
   pp = dim(x)[2]                                                       
   tmpbeta = matrix(0, length(JJ), pp)
   Hseq = H(JJ)
+  dilate = 1 + log((1 - JJ[1]) / (1 - JJ))
   
   augy1 = y[which(delta == 1)]                                           
   augx1 = x[which(delta == 1), ]                                          
@@ -84,36 +68,11 @@ quantproc = function(y, x, delta, JJ, lambda, tol = 1e-6){
     sto_weights[s, ] = sto_weights[s - 1, ] + 2 * Hm * rproc[s - 1, ]           
     augx3 = sto_weights[s, ] %*% x                                    
     augx = rbind(augx1, augx2, augx3)
-    tmpbeta[s,] = LASSO.fit(augy, augx, tau = 0.5, lambda = lambda, intercept = FALSE, coef.cutoff = 0.0001, weights = NULL)
+    tmpbeta[s,] = LASSO.fit(augy, augx, tau = 0.5, lambda = lambda * dilate[s], intercept = FALSE, coef.cutoff = 0.0001, weights = NULL)
     rproc[s, ] = 1*( y > x %*% tmpbeta[s, ])                              
   }
   return (t(tmpbeta))
 }
-
-cvCqr = function(X, censor, Y, lambdaSeq, tauSeq, K, folds) {
-  l = length(lambdaSeq)
-  mse = rep(0, l)
-  Z = cbind(1, X)
-  HSeq = H(tauSeq)
-  for (k in 1:K) {
-    indTest = which(folds == k)
-    indTrain = which(folds != k)
-    Ztrain = Z[indTrain, ]
-    Ztest = Z[indTest, ]
-    Ytrain = Y[indTrain]
-    Ytest = Y[indTest]
-    censorTrain = censor[indTrain]
-    censorTest = censor[indTest]
-    for (i in 1:l) {
-      lambda = lambdaSeq[i]
-      betaHat = quantproc(Ytrain, Ztrain, censorTrain, tauSeq, lambda)
-      mse[i] = mse[i] + calRes(Ztest, censorTest, Ytest, betaHat, tauSeq, HSeq)
-    }
-  }
-  index = which.min(mse)
-  return (quantproc(Y, Z, censor, tauSeq, lambdaSeq[index]))
-}
-
 
 #### High-dim quantile process with fixed scale
 n = 50
@@ -153,6 +112,22 @@ for (i in 1:M) {
   prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
   folds = createFolds(censor, kfolds, FALSE)
+  
+  scqr.fit = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  lambda0 = scqr.fit$lambda0
+  beta.lasso = scqr.fit$beeta.lasso
+  test = exam(betaMat, beta.lasso)
+  TPR[, i] = test$TPR
+  TNR[, i] = test$TNR
+  PPV[, i] = test$PPV
+  FDR[, i] = test$FDR
+  error[, i] = test$error
+  RE[, i] = test$RE
+  start = Sys.time()
+  beta.lasso = cvSqrLasso(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  
 
   ## HDCQR-Lasso using quantreg
   start = Sys.time()
