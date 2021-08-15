@@ -177,131 +177,90 @@ for (i in 1:M) {
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero")
+tp.lasso = as.matrix(read.csv("tp_lasso.csv")[, -1])
+tp.scad = as.matrix(read.csv("tp_scad.csv")[, -1])
+tp.mcp = as.matrix(read.csv("tp_mcp.csv")[, -1])
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
 mtc.scad = as.matrix(read.csv("mtc_scad.csv")[, -1])
 mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
 
-rbind(rowMeans(mtc.lasso, na.rm = TRUE), rowMeans(mtc.scad, na.rm = TRUE), rowMeans(mtc.mcp, na.rm = TRUE))
 
-### Dataframe construction
-TPR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind1], rowMeans(mtc.scad, na.rm = TRUE)[ind1], rowMeans(mtc.mcp, na.rm = TRUE)[ind1])
-TNR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind2], rowMeans(mtc.scad, na.rm = TRUE)[ind2], rowMeans(mtc.mcp, na.rm = TRUE)[ind2])
-PPV = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind3], rowMeans(mtc.scad, na.rm = TRUE)[ind3], rowMeans(mtc.mcp, na.rm = TRUE)[ind3])
-FDR = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind4], rowMeans(mtc.scad, na.rm = TRUE)[ind4], rowMeans(mtc.mcp, na.rm = TRUE)[ind4])
-error = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind5], rowMeans(mtc.scad, na.rm = TRUE)[ind5], rowMeans(mtc.mcp, na.rm = TRUE)[ind5])
-RE = c(rowMeans(mtc.lasso, na.rm = TRUE)[ind6], rowMeans(mtc.scad, na.rm = TRUE)[ind6], rowMeans(mtc.mcp, na.rm = TRUE)[ind6])
-dat = as.data.frame(cbind(TPR, TNR, PPV, FDR, error, RE))
-colnames(dat) = c("TPR", "TNR", "PPV", "FDR", "error", "RE")
-dat$tau = rep(tauSeq, 3)
-dat$type = c(rep("\\texttt{Lasso}", nTau), rep("\\texttt{SCAD}", nTau), rep("\\texttt{MCP}", nTau))
-dat$type = factor(dat$type, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
 
-### TPR
+### Data for plots
+meth = c(rep("Lasso", M), rep("SCAD", M), rep("MCP", M))
+meth = factor(meth, levels = c("Lasso", "SCAD", "MCP"))
+time = c(tp.lasso[1, ], tp.scad[1, ], tp.mcp[1, ])
+prop = c(tp.lasso[2, ], tp.scad[2, ], tp.mcp[2, ])
+TPR = c(mtc.lasso[1, ], mtc.scad[1, ], mtc.mcp[1, ])
+TNR = c(mtc.lasso[2, ], mtc.scad[2, ], mtc.mcp[2, ])
+FDR = c(mtc.lasso[3, ], mtc.scad[3, ], mtc.mcp[3, ])
+error = c(mtc.lasso[4, ], mtc.scad[4, ], mtc.mcp[4, ])
+dat = data.frame("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = error, "time" = time, "prop" = prop, "method" = meth)
+
+
+
+### Proportion
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = TPR)) +
-  geom_line(aes(y = TPR, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("True positive rate") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-##TNR
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = TNR)) +
-  geom_line(aes(y = TNR, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("True negative rate") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-## PPV
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = PPV)) +
-  geom_line(aes(y = PPV, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Precision") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
-## FDR
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = FDR)) +
-  geom_line(aes(y = FDR, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("False discover rate") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
-## error
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = error)) +
-  geom_line(aes(y = error, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("$\\ell_2$ error") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-## RE
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = tau, y = RE)) +
-  geom_line(aes(y = RE, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Quantile level $\\tau$") + ylab("Relative error") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
-### Box plots
-iii = 3
-rst1 = c(mtc.lasso[ind4, ][iii, ], mtc.scad[ind4, ][iii, ], mtc.mcp[ind4, ][iii, ])
-meth = c(rep("\\texttt{Lasso}", M), rep("\\texttt{SCAD}", M), rep("\\texttt{MCP}", M))
-meth = factor(meth, levels = c("\\texttt{Lasso}", "\\texttt{SCAD}", "\\texttt{MCP}"))
-dat = data.frame("est" = rst1, "method" = meth)
-
-setwd("~/Dropbox/Conquer/SCQR/Code")
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = method, y = est, fill = method)) + 
-  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+ggplot(dat, aes(x = prop, y = prop, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
   scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Estimation") + 
-  #scale_y_continuous(breaks = c(5, 15, 25)) + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
 
+### TPR
+setwd("~/Dropbox/Conquer/SCQR/Code")
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = method, y = TPR, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Estimation") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
 
 
+### TNR
+setwd("~/Dropbox/Conquer/SCQR/Code")
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = method, y = TNR, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("True negative rate") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+### FDR
+setwd("~/Dropbox/Conquer/SCQR/Code")
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = method, y = FDR, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("False discovery rate") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+### error
+setwd("~/Dropbox/Conquer/SCQR/Code")
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = method, y = error, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("$$Estimation error in $||\\cdot||_2$") + ylim(0.2, 2.5) + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+### time
+setwd("~/Dropbox/Conquer/SCQR/Code")
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = method, y = time, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
 
