@@ -248,7 +248,7 @@ setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = method, y = error, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("$$Estimation error in $||\\cdot||_2$") + ylim(0.2, 2.5) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("$$Estimation error in $||\\cdot||_2$") + ylim(0.4, 2) + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
