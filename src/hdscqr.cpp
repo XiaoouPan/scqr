@@ -826,10 +826,11 @@ arma::mat SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, cons
   arma::vec betaHat = sqr0Scad(Z, censor, Y, lambda, accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   arma::vec HSeq = getH(tauSeq);
+  arma::vec dilate = 1 + arma::log((1 - tauSeq(0)) / (1 - tauSeq));
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkScad(Z, censor, Y, lambda, accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkScad(Z, censor, Y, lambda * dilate(k), accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
@@ -965,10 +966,11 @@ arma::mat SqrMcp(const arma::mat& X, const arma::vec& censor, arma::vec Y, const
   arma::vec betaHat = sqr0Mcp(Z, censor, Y, lambda, accu, tauSeq(0), p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
   betaProc.col(0) = betaHat;
   arma::vec HSeq = getH(tauSeq);
+  arma::vec dilate = 1 + arma::log((1 - tauSeq(0)) / (1 - tauSeq));
   for (int k = 1; k < m; k++) {
     arma::vec res = Y - Z * betaHat;
     accu += arma::normcdf(res * h1) * (HSeq(k) - HSeq(k - 1));
-    betaHat = sqrkMcp(Z, censor, Y, lambda, accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
+    betaHat = sqrkMcp(Z, censor, Y, lambda * dilate(k), accu, betaHat, p, 1.0 / n, h, h1, h2, phi0, gamma, epsilon, iteMax);
     betaProc.col(k) =  betaHat;
   }
   betaProc.rows(1, p).each_col() %= sx1;
