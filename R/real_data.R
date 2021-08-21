@@ -114,5 +114,27 @@ ci.norm = getNormCI(beta.hat[, nTau], rowSds(beta.boot), z)
 
 
 ## Highd data
+Rcpp::sourceCpp("src/hdscqr.cpp")
+dat = read.table("~/Dropbox/Conquer/SCQR/real_data/GSE68465.txt", header = FALSE)
+index = which(is.na(dat[1, ]))
+dat = dat[, -index]
+dim(dat)
+X = t(as.matrix(dat[3:22285, 2:444]))
+censor = as.numeric(dat[1, 2:444] == "vital_status: Dead")
+Y = rep(NA, n)
+for (i in 1:n) {
+  Y[i] = as.numeric(unlist(strsplit(dat[2, i + 1], " "))[2])
+}
+index = which(is.na(Y))
+Y = Y[-index]
+censor = censor[-index]
+X = X[-index, ]
+n = nrow(X)
+p = ncol(X)
+X = matrix(as.numeric(X), n, p)
+1 - sum(censor) / n  ##censor rate 46.6%
+
+### Run code
+
 
 
