@@ -121,11 +121,10 @@ Rcpp::sourceCpp("src/hdscqr.cpp")
 dat = read.table("~/Dropbox/Conquer/SCQR/real_data/GSE68465.txt", header = FALSE)
 index = which(is.na(dat[1, ]))
 dat = dat[, -index]
-dim(dat)
 X = t(as.matrix(dat[3:22285, 2:444]))
 censor = as.numeric(dat[1, 2:444] == "vital_status: Dead")
-Y = rep(NA, n)
-for (i in 1:n) {
+Y = rep(NA, 443)
+for (i in 1:443) {
   Y[i] = as.numeric(unlist(strsplit(dat[2, i + 1], " "))[2])
 }
 index = which(is.na(Y))
@@ -136,8 +135,56 @@ n = nrow(X)
 p = ncol(X)
 X = matrix(as.numeric(X), n, p)
 1 - sum(censor) / n  ##censor rate 46.6%
+rm(dat)
+tauSeq = seq(0.1, 0.7, by = 0.01)
+grid = seq(0.1, 0.71, by = 0.01)
+nTau = length(tauSeq)
+m = length(tauSeq)
+lambdaSeq = exp(seq(log(0.14), log(0.06), length.out = 50))
+h = 0.5 * (log(p) / n)^(1/4)
+setRecord = matrix(0, p, 50)
+time = rep(0, 50)
 
-### Run code
+for (i in 1:50) {
+  ### lasso
+  start = Sys.time()
+  beta.lasso = SqrLasso(X, censor, Y, lambdaSeq[i], tauSeq, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  activeSet = getSet(beta.lasso, m)
+  uniSet = activeSet$union
+  if (length(uniSet) > 0) {
+    setRecord[uniSet, i] = 1
+  }
+  
+  ### scad
+  start = Sys.time()
+  beta.scad = SqrScad(X, censor, Y, lambdaSeq[i], tauSeq, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  activeSet = getSet(beta.scad, m)
+  uniSet = activeSet$union
+  if (length(uniSet) > 0) {
+    setRecord[uniSet, i] = 1
+  }
+  
+  ### mcp
+  start = Sys.time()
+  beta.mcp = SqrMcp(X, censor, Y, lambdaSeq[i], tauSeq, h)
+  end = Sys.time()
+  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  activeSet = getSet(beta.mcp, m)
+  uniSet = activeSet$union
+  if (length(uniSet) > 0) {
+    setRecord[uniSet, i] = 1
+  }
+}
 
-
-
+#### cqr, for just one lambda
+Z = cbind(1, X)
+start = Sys.time()
+beta.cqr = quantproc(Y, Z, censor, tauSeq, 0.1)
+end = Sys.time()
+time = as.numeric(difftime(end, start, units = "secs"))
+activeSet = getSet(beta.cqr, m)
+uniSet = activeSet$union
