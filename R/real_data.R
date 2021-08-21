@@ -82,18 +82,27 @@ p = ncol(X)
 1 - sum(censor) / n  ## censoring rate: 61.5%
 tauSeq = seq(0.01, 0.9, by = 0.01)
 grid = seq(0.01, 0.91, by = 0.01)
+nTau = length(tauSeq)
+alpha = 0.05
+lower = upper = NULL
 
-start = Sys.time()
-#list = scqrGaussInf(X, Y, censor, tauSeq, B = 1000)
 list = scqrGauss(X, Y, censor, tauSeq)
-end = Sys.time()
-as.numeric(difftime(end, start, units = "secs"))
-beta.scqr = list$coeff[-1, ]
+est = list$coeff
+for (i in 1:nTau) {
+  list = scqrGaussInf(X, Y, censor, tauSeq[1:i], B = 1000)
+  beta.boot = list$boot
+  ci.list = getPivCI(est[, i], beta.boot, alpha)
+  lower = cbind(lower, ci.list$perCI[, 1])
+  upper = cbind(upper, ci.list$perCI[, 2])
+}
 
 response = Surv(Y, censor, type = "right")
 list = crq(response ~ X, method = "PengHuang", grid = grid)
-beta.cqr = list$sol[3:7, ]
+ph = list$sol[2:7, ]
 
+
+
+### plots
 plot(tauSeq, beta.scqr[1, ], type = "l", ylim = c(-0.035, 0.04))
 lines(tauSeq, beta.cqr[1, ], type = "l", col = "red")
 plot(tauSeq, beta.scqr[2, ], type = "l", ylim = c(-1.9, -0.25))
@@ -104,12 +113,6 @@ plot(tauSeq, beta.scqr[4, ], type = "l", ylim = c(0.8, 2.9))
 lines(tauSeq, beta.cqr[4, ], type = "l", col = "red")
 plot(tauSeq, beta.scqr[5, ], type = "l", ylim = c(-5.2, 2.2))
 lines(tauSeq, beta.cqr[5, ], type = "l", col = "red")
-
-beta.boot = list$boot
-ci.list = getPivCI(beta.hat[, nTau], beta.boot, alpha)
-ci.per = ci.list$perCI
-ci.piv = ci.list$pivCI
-ci.norm = getNormCI(beta.hat[, nTau], rowSds(beta.boot), z)
 
 
 
