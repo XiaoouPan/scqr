@@ -84,10 +84,11 @@ tauSeq = seq(0.01, 0.9, by = 0.01)
 grid = seq(0.01, 0.91, by = 0.01)
 nTau = length(tauSeq)
 alpha = 0.05
+h = 0.5 * ((p + log(n)) / n)^(0.4)
 lower = upper = NULL
 
-list = scqrGauss(X, Y, censor, tauSeq)
-est = list$coeff
+list = scqrGauss(X, Y, censor, tauSeq, h = h)
+est.h2 = list$coeff
 for (i in 1:nTau) {
   list = scqrGaussInf(X, Y, censor, tauSeq[1:i], B = 1000)
   beta.boot = list$boot
@@ -103,6 +104,42 @@ ph = list$sol[2:7, ]
 
 
 ### plots
+setwd("~/Dropbox/Conquer/SCQR/Code")
+est = as.matrix(read.csv("real/est.csv")[, -1])
+low_up = as.matrix(read.csv("real/low_up.csv")[, -1])
+beta.scqr = est[2:6, ]
+beta.cqr = est[8:12, ]
+lower = low_up[2:6, ]
+upper = low_up[8:12, ]
+beta.scqr2 = est.h2[2:6, ]
+
+k = 2
+dat = cbind(tauSeq, beta.scqr[k, ], lower[k, ], upper[k, ])
+dat = rbind(dat, cbind(tauSeq, beta.scqr2[k, ], beta.scqr2[k, ], beta.scqr2[k, ]))
+dat = rbind(dat, cbind(tauSeq, beta.cqr[k, ], beta.cqr[k, ], beta.cqr[k, ]))
+dat = as.data.frame(dat)
+colnames(dat) = c("quantile", "coeff", "lower", "upper")
+dat$type = c(rep("\\texttt{Our method}", nTau), rep("\\texttt{Our method 2}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Our method 2}"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = quantile, y = coeff, color = type)) +
+  geom_line(aes(y = coeff, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
+  #geom_ribbon(aes(y = coeff, ymin = lower, ymax = upper, fill = type), alpha = 0.3) + 
+  theme_bw() + xlab("Quantile level $\\tau$") + 
+  ylab("Estimated coefficients") + 
+  theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20)) 
+  #theme(legend.position = c(0.65, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+  #      axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+
+
+
 plot(tauSeq, beta.scqr[1, ], type = "l", ylim = c(-0.035, 0.04))
 lines(tauSeq, beta.cqr[1, ], type = "l", col = "red")
 plot(tauSeq, beta.scqr[2, ], type = "l", ylim = c(-1.9, -0.25))
