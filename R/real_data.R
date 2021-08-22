@@ -225,3 +225,28 @@ end = Sys.time()
 time = as.numeric(difftime(end, start, units = "secs"))
 activeSet = getSet(beta.cqr, m)
 uniSet = activeSet$union
+
+
+
+### read data
+lambdaSeq = exp(seq(log(0.14), log(0.06), length.out = 50))
+setwd("~/Dropbox/Conquer/SCQR/Code")
+rec = as.matrix(read.csv("real/set_lasso.csv")[, -1])
+set1 = rec[1:22283, ]
+time1 = rec[22284, ]
+plot(1:50, colSums(set1), type = "l")
+
+rec = as.matrix(read.csv("real/set_scad.csv")[, -1])
+set2 = rec[1:22283, ]
+time2 = rec[22284, ]
+plot(1:50, colSums(set2), type = "l")
+
+rec = as.matrix(read.csv("real/set_mcp.csv")[, -1])
+set3 = rec[1:22283, ]
+time3 = rec[22284, ]
+plot(1:50, colSums(set3), type = "l")
+
+which(set1[, 25] == 1)
+which(set2[, 25] == 1)
+which(set3[, 25] == 1)
+
