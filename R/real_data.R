@@ -173,6 +173,10 @@ p = ncol(X)
 X = matrix(as.numeric(X), n, p)
 1 - sum(censor) / n  ##censor rate 46.6%
 rm(dat)
+var.sort = sort(colVars(X), decreasing = TRUE)
+index = which(colVars(X) >= var.sort[3000])
+X = X[, index]
+
 tauSeq = seq(0.1, 0.7, by = 0.01)
 grid = seq(0.1, 0.71, by = 0.01)
 nTau = length(tauSeq)
