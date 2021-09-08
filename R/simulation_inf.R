@@ -122,7 +122,7 @@ getWidthPlot = function(width1, width3, j, p) {
 }
 
 
-n = 1000
+n = 5000
 p = n / 50
 M = 500
 tauSeq = seq(0.1, 0.5, by = 0.1)
@@ -235,7 +235,11 @@ rbind(time1, time2, time3)
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/inference/homo")
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/inference_small/hetero")
+#cover_mb = as.matrix(read.csv("cover_mb.csv")[, -1])
+#width_mb = as.matrix(read.csv("width_mb.csv")[, -1])
+#cover_pair = as.matrix(read.csv("cover_pair.csv")[, -1])
+#width_pair = as.matrix(read.csv("width_pair.csv")[, -1])
 ind1 = c(1:100, 500 + 1:100, 1000 + 1:100)
 ind2 = c(101:200, 500 + 101:200, 1000 + 101:200)
 ind3 = c(201:300, 500 + 201:300, 1000 + 201:300)
