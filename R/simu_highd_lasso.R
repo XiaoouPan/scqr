@@ -6,6 +6,7 @@ library(matrixStats)
 library(survival)
 library(caret)
 library(rqPen)
+library(hqreg)
 library(tikzDevice)
 library(ggplot2)
 
@@ -69,9 +70,9 @@ quantproc = function(y, x, delta, JJ, lambda, tol = 1e-4) {
 
 
 #### High-dim quantile process with fixed scale
-n = 400
-p = 1000
-s = 10
+n = 40
+p = 100
+s = 2
 M = 1
 kfolds = 3
 h = (log(p) / n)^(1/4)

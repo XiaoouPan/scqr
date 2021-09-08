@@ -235,21 +235,44 @@ rbind(time1, time2, time3)
 
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/Inference/hetero")
-time = as.matrix(read.csv("time.csv")[, -1])
-cover_mb = as.matrix(read.csv("cover_mb.csv")[, -1])
-cover_jack = as.matrix(read.csv("cover_jack.csv")[, -1])
-cover_pair = as.matrix(read.csv("cover_pair.csv")[, -1])
-width_mb = as.matrix(read.csv("width_mb.csv")[, -1])
-width_jack = as.matrix(read.csv("width_jack.csv")[, -1])
-width_pair = as.matrix(read.csv("width_pair.csv")[, -1])
-
-
-
+setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/inference/homo")
+ind1 = c(1:100, 500 + 1:100, 1000 + 1:100)
+ind2 = c(101:200, 500 + 101:200, 1000 + 101:200)
+ind3 = c(201:300, 500 + 201:300, 1000 + 201:300)
+ind4 = c(301:400, 500 + 301:400, 1000 + 301:400)
+ind5 = c(401:500, 500 + 401:500, 1000 + 401:500)
+time = cbind(as.matrix(read.csv("1time.csv")[, 2:101]), as.matrix(read.csv("2time.csv")[, 102:201]), as.matrix(read.csv("3time.csv")[, 202:301]),
+             as.matrix(read.csv("4time.csv")[, 302:401]), as.matrix(read.csv("5time.csv")[, 402:501]))
+cover_mb = matrix(NA, 1500, 100)
+cover_mb[ind1, ] = as.matrix(read.csv("1cover_mb.csv")[ind1, -1])
+cover_mb[ind2, ] = as.matrix(read.csv("2cover_mb.csv")[ind2, -1])
+cover_mb[ind3, ] = as.matrix(read.csv("3cover_mb.csv")[ind3, -1])
+cover_mb[ind4, ] = as.matrix(read.csv("4cover_mb.csv")[ind4, -1])
+cover_mb[ind5, ] = as.matrix(read.csv("5cover_mb.csv")[ind5, -1])
+#cover_jack = as.matrix(read.csv("cover_jack.csv")[, -1])
+cover_pair = matrix(NA, 1500, 100)
+cover_pair[ind1, ] = as.matrix(read.csv("1cover_pair.csv")[ind1, -1])
+cover_pair[ind2, ] = as.matrix(read.csv("2cover_pair.csv")[ind2, -1])
+cover_pair[ind3, ] = as.matrix(read.csv("3cover_pair.csv")[ind3, -1])
+cover_pair[ind4, ] = as.matrix(read.csv("4cover_pair.csv")[ind4, -1])
+cover_pair[ind5, ] = as.matrix(read.csv("5cover_pair.csv")[ind5, -1])
+width_mb = matrix(NA, 1500, 100)
+width_mb[ind1, ] = as.matrix(read.csv("1width_mb.csv")[ind1, -1])
+width_mb[ind2, ] = as.matrix(read.csv("2width_mb.csv")[ind2, -1])
+width_mb[ind3, ] = as.matrix(read.csv("3width_mb.csv")[ind3, -1])
+width_mb[ind4, ] = as.matrix(read.csv("4width_mb.csv")[ind4, -1])
+width_mb[ind5, ] = as.matrix(read.csv("5width_mb.csv")[ind5, -1])
+#width_jack = as.matrix(read.csv("width_jack.csv")[, -1])
+width_pair = matrix(NA, 1500, 100)
+width_pair[ind1, ] = as.matrix(read.csv("1width_pair.csv")[ind1, -1])
+width_pair[ind2, ] = as.matrix(read.csv("2width_pair.csv")[ind2, -1])
+width_pair[ind3, ] = as.matrix(read.csv("3width_pair.csv")[ind3, -1])
+width_pair[ind4, ] = as.matrix(read.csv("4width_pair.csv")[ind4, -1])
+width_pair[ind5, ] = as.matrix(read.csv("5width_pair.csv")[ind5, -1])
 
 ### coverage plot
 cover1 = cover_mb
-cover2 = cover_jack
+#cover2 = cover_jack
 cover3 = cover_pair
 
 summ = getCoverPlot(cover1, cover3, p)
@@ -267,7 +290,7 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 ### width plot
 width1 = width_mb
-width2 = width_jack
+#width2 = width_jack
 width3 = width_pair
 
 summ = getWidthPlot(width1, width3, 1, M)
@@ -286,13 +309,13 @@ tools::texi2dvi("plot.tex", pdf = T)
 ### time plot
 meth = c(rep("Multiplier", M), rep("Pair", M))
 meth = factor(meth, levels = c("Multiplier", "Pair"))
-rst = data.frame("time" = c(time[1, ], time[3, ]), "method" = meth)
+rst = data.frame("time" = c(time[1, ], time[3, ]) / 60, "method" = meth)
 setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(rst, aes(x = method, y = time, fill = method)) + 
-  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + 
-  scale_y_continuous(breaks = c(5, 15, 25)) + 
+  geom_boxplot(alpha = 1, width = 0.8, lwd = 0.2, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in minutes)") + 
+  #scale_y_continuous(breaks = c(5, 15, 25)) + 
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)

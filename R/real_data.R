@@ -8,6 +8,7 @@ library(caret)
 library(rqPen)
 library(tikzDevice)
 library(ggplot2)
+library(xtable)
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")
@@ -159,6 +160,7 @@ dat = read.table("~/Dropbox/Conquer/SCQR/real_data/GSE68465.txt", header = FALSE
 index = which(is.na(dat[1, ]))
 dat = dat[, -index]
 X = t(as.matrix(dat[3:22285, 2:444]))
+ids = dat[3:22285, 1]
 censor = as.numeric(dat[1, 2:444] == "vital_status: Dead")
 Y = rep(NA, 443)
 for (i in 1:443) {
@@ -168,14 +170,15 @@ index = which(is.na(Y))
 Y = Y[-index]
 censor = censor[-index]
 X = X[-index, ]
-n = nrow(X)
-p = ncol(X)
+n = nrow(X) ## n = 442
+p = ncol(X) ## p = 22283
 X = matrix(as.numeric(X), n, p)
 1 - sum(censor) / n  ##censor rate 46.6%
 rm(dat)
 var.sort = sort(colVars(X), decreasing = TRUE)
 index = which(colVars(X) >= var.sort[3000])
 X = X[, index]
+ids.short = ids[index]
 
 tauSeq = seq(0.1, 0.7, by = 0.01)
 grid = seq(0.1, 0.71, by = 0.01)
@@ -233,24 +236,117 @@ uniSet = activeSet$union
 
 
 ### read data
-lambdaSeq = exp(seq(log(0.14), log(0.06), length.out = 50))
+lambdaSeq = exp(seq(log(0.14), log(0.06), length.out = 50))  ## for the whole data
+#lambdaSeq = exp(seq(log(0.12), log(0.07), length.out = 50)) ## for the data after screening
 setwd("~/Dropbox/Conquer/SCQR/Code")
 rec = as.matrix(read.csv("real/set_lasso.csv")[, -1])
-set1 = rec[1:22283, ]
-time1 = rec[22284, ]
-plot(1:50, colSums(set1), type = "l")
+p = nrow(rec) - 1
+set1 = rec[1:p, ]
+time1 = rec[p + 1, ]
+#plot(1:50, colSums(set1), type = "l")
 
 rec = as.matrix(read.csv("real/set_scad.csv")[, -1])
-set2 = rec[1:22283, ]
-time2 = rec[22284, ]
-plot(1:50, colSums(set2), type = "l")
+set2 = rec[1:p, ]
+time2 = rec[p + 1, ]
+#plot(1:50, colSums(set2), type = "l")
 
 rec = as.matrix(read.csv("real/set_mcp.csv")[, -1])
-set3 = rec[1:22283, ]
-time3 = rec[22284, ]
-plot(1:50, colSums(set3), type = "l")
+set3 = rec[1:p, ]
+time3 = rec[p + 1, ]
+#plot(1:50, colSums(set3), type = "l")
 
-which(set1[, 25] == 1)
-which(set2[, 25] == 1)
-which(set3[, 25] == 1)
+which(set1[, 20] == 1)
+which(set2[, 20] == 1)
+which(set3[, 20] == 1)
+
+lasso.set = rep(0, 50)
+temp = NULL
+for (i in 1:50) {
+  temp = union(temp, which(set1[, i] == 1))
+  lasso.set[i] = length(temp)
+}
+scad.set = rep(0, 50)
+temp = NULL
+for (i in 1:50) {
+  temp = union(temp, which(set2[, i] == 1))
+  scad.set[i] = length(temp)
+}
+mcp.set = rep(0, 50)
+temp = NULL
+for (i in 1:50) {
+  temp = union(temp, which(set3[, i] == 1))
+  mcp.set[i] = length(temp)
+}
+
+### Detect genes
+rec = matrix(0, 10, 6)
+idmax = min(which(lasso.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set1[, i] == 1))
+}
+rec[, 1] = ids[temp]
+idmax = min(which(scad.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set2[, i] == 1))
+}
+rec[, 2] = ids[temp]
+idmax = min(which(mcp.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set3[, i] == 1))
+}
+rec[, 3] = ids[temp]
+## Switch to preprocessed data
+idmax = min(which(lasso.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set1[, i] == 1))
+}
+rec[, 4] = ids.short[temp]
+idmax = min(which(scad.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set2[, i] == 1))
+}
+rec[, 5] = ids.short[temp]
+idmax = min(which(mcp.set >= 10))
+temp = NULL
+for (i in 1:idmax) {
+  temp = union(temp, which(set3[, i] == 1))
+}
+rec[, 6] = ids.short[temp]
+
+xtable(rec)
+
+
+#### plots
+dat = cbind(rep(lambdaSeq, 3), c(lasso.set, scad.set, mcp.set))
+dat = as.data.frame(dat)
+colnames(dat) = c("lambda", "select")
+dat$type = c(rep("Lasso", 50), rep("SCAD", 50), rep("MCP", 50))
+dat$type = factor(dat$type, levels = c("Lasso", "SCAD", "MCP"))
+
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(dat, aes(x = lambda, y = select, color = type)) +
+  geom_line(aes(y = select, color = type, linetype = type), size = 3) + 
+  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
+  scale_x_reverse() + 
+  #geom_ribbon(aes(y = coeff, ymin = lower, ymax = upper, fill = type), alpha = 0.3) + 
+  theme_bw() + xlab("$\\lambda_0$ for the lowest quantile $\\tau_L$") + 
+  ylab("Number of selected genes") + 
+  theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20)) 
+  #theme(legend.position = c(0.2, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+  #      axis.title = element_text(size = 20))
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+c(mean(time1), mean(time2), mean(time3)) / 60
+### running times in minutes for whole data: 1.997639 4.097142 4.057068
+### running times in minutes for data after screening: 0.2487536 0.3524235 0.3571225
+
+rec = as.matrix(read.csv("real/set_cqr_small.csv")[, -1])
 
