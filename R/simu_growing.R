@@ -131,6 +131,7 @@ time = cbind(time, as.matrix(read.csv("Simulation/growing/time_hetero_18.csv")[,
 time = cbind(time, as.matrix(read.csv("Simulation/growing/time_hetero_20.csv")[, -1]))
 time1 = time[1:500, ]
 time2 = time[501:1000, ]
+diff = as.matrix(read.csv("Simulation/growing/diff_homo.csv")[, -1])
 
 
 ### Global estimation error 
