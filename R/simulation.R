@@ -104,30 +104,17 @@ for (i in 1:M) {
 }
 
 
-setwd("~/Dropbox/Conquer/censoredQR/Code")
-write.csv(time, "Simulation/time_hetero.csv")
-write.csv(rbind(coef1, coef2, coef3), "Simulation/coef_hetro.csv")
-write.csv(rbind(eff1, eff2, eff3), "Simulation/eff_hetero.csv")
-
-
-## Check corner cases
-rowMeans(time)
-index = which(coef2[, nTau - 1] == 0)
-coef1 = coef1[-index, ]
-coef2 = coef2[-index, ]
-coef3 = coef3[-index, ]
-eff1 = eff1[-index, ]
-eff2 = eff2[-index, ]
-eff3 = eff3[-index, ]
-
 
 
 setwd("~/Dropbox/Conquer/SCQR/Code")
-coe.data = as.matrix(read.csv("Simulation/coef_hetero.csv")[, -1])
+coe.data = as.matrix(read.csv("Simulation/sensitivity/coef_homo.csv")[, -1])
 coef1 = coe.data[1:500, ]
 coef2 = coe.data[501:1000, ]
-coef3 = coe.data[1001:1500, ]
-
+coef4 = coe.data[1001:1500, ]
+coef5 = coe.data[1501:2000, ]
+coe.data = as.matrix(read.csv("Simulation/coef_homo.csv")[, -1])
+coef3 = coe.data[1:500, ]
+coef6 = coe.data[501:1000, ]
 
 ### Estimation plots
 #sd1 = colSds(coef1)
@@ -139,7 +126,11 @@ mean1 = colMeans(coef1)
 mean2 = colMeans(coef2)
 #low = mean2 - sd2
 #upp = mean2 + sd2
-dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2))
+mean4 = colMeans(coef4)
+mean5 = colMeans(coef5)
+mean3 = colMeans(coef3)
+mean6 = colMeans(coef6)
+dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2), cbind(tauSeq, mean3), cbind(tauSeq, mean4), cbind(tauSeq, mean5), cbind(tauSeq, mean6))
 #sd3 = colSds(coef3)
 #mean3 = colMeans(coef3)
 #low = mean3 - sd3
@@ -147,19 +138,21 @@ dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2))
 #dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
 dat = as.data.frame(dat)
 colnames(dat) = c("quantile", "coef")
-dat$type = c(rep("\\texttt{Our method}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
+dat$type = c(rep("\\texttt{Bandwidth 1}", nTau), rep("\\texttt{Bandwidth 2}", nTau), rep("\\texttt{Bandwidth 3}", nTau), 
+             rep("\\texttt{Bandwidth 4}", nTau), rep("\\texttt{Bandwidth 5}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Bandwidth 1}", "\\texttt{Bandwidth 2}",
+                                       "\\texttt{Bandwidth 3}", "\\texttt{Bandwidth 4}", "\\texttt{Bandwidth 5}"))
 
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = quantile, y = coef)) +
   geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid")) +
+  scale_linetype_manual(values = c(rep("twodash", 5), "solid")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
   theme_bw() + xlab("Quantile level $\\tau$") + ylab("Estimation error in $||\\cdot||_2$") +
-  theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  #theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-  #      axis.title = element_text(size = 20))
+  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
+  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
+        axis.title = element_text(size = 20))
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 

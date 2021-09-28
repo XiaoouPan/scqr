@@ -49,6 +49,7 @@ pb = txtProgressBar(style = 3)
 for (j in 1:l) {
   n = nseq[j]
   p = pseq[j]
+  h = 0.5 * ((p + log(n)) / n)^(0.4)
   for (i in 1:M) {
     set.seed((j - 1) * M + i)
     Sigma = getSigma(p)
