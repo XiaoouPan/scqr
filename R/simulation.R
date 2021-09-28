@@ -138,19 +138,19 @@ dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2), cbind(tauSeq, mean3), cb
 #dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
 dat = as.data.frame(dat)
 colnames(dat) = c("quantile", "coef")
-dat$type = c(rep("\\texttt{Bandwidth 1}", nTau), rep("\\texttt{Bandwidth 2}", nTau), rep("\\texttt{Bandwidth 3}", nTau), 
-             rep("\\texttt{Bandwidth 4}", nTau), rep("\\texttt{Bandwidth 5}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Bandwidth 1}", "\\texttt{Bandwidth 2}",
-                                       "\\texttt{Bandwidth 3}", "\\texttt{Bandwidth 4}", "\\texttt{Bandwidth 5}"))
+dat$type = c(rep("\\texttt{Bandwidth} $h_1$", nTau), rep("\\texttt{Bandwidth} $h_2$", nTau), rep("\\texttt{Bandwidth} $h_3$", nTau), 
+             rep("\\texttt{Bandwidth} $h_4$", nTau), rep("\\texttt{Bandwidth} $h_5$", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Bandwidth} $h_1$", "\\texttt{Bandwidth} $h_2$",
+                                       "\\texttt{Bandwidth} $h_3$", "\\texttt{Bandwidth} $h_4$", "\\texttt{Bandwidth} $h_5$"))
 
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = quantile, y = coef)) +
-  geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c(rep("twodash", 5), "solid")) +
+  geom_line(aes(y = coef, color = type, linetype = type), size = 1) + 
+  scale_linetype_manual(values = c("solid", rep("twodash", 5))) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
   theme_bw() + xlab("Quantile level $\\tau$") + ylab("Estimation error in $||\\cdot||_2$") +
   #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.75), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  theme(legend.position = c(0.65, 0.7), legend.title = element_blank(), legend.text = element_text(size = 15), legend.key.size = unit(0.9, "cm"),
         legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
         axis.title = element_text(size = 20))
 dev.off()
@@ -158,33 +158,17 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 
-
-est = rbind(colMeans(coef1), colMeans(coef2), colMeans(coef3))
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(tauSeq, est[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 0.85), ylim = c(0.3, 2.0), xlab = "", ylab = "")
-lines(tauSeq, est[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
-lines(tauSeq, est[3, ], type = "b", pch = 4, lwd = 5, cex = 1, col = "forestgreen")
-axis(1, tauSeq[c(1, 6, 11, 16)], line = 0, cex.axis = 1.5)
-axis(2, c(0.3, 0.7, 1.1, 1.5, 1.9), line = 0, cex.axis = 1.5)
-box()
-abline(h = c(0.3, 0.7, 1.1, 1.5, 1.9), v = tauSeq[c(1, 6, 11, 16)], col = "gray", lty = 2)
-color = c("red", "blue", "forestgreen")
-labels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}", "\\texttt{Portnoy}")
-pch = c(1, 2, 4)
-legend("topright", labels, col = color, pch = pch, lwd = 5, cex = 2, box.lwd = 1, bg = "white")
-title(xlab = "Quantile level $\\tau$", line = 2.5, cex.lab = 1.8)
-title(ylab = "Estimation error in $||\\cdot||_2$", line = 2.5, cex.lab = 1.8)
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
 ### Quantile effects plots
 setwd("~/Dropbox/Conquer/SCQR/Code")
-
-eff.data = as.matrix(read.csv("Simulation/eff_hetero.csv")[, -1])
+eff.data = as.matrix(read.csv("Simulation/sensitivity/eff_hetero.csv")[, -1])
 eff1 = eff.data[1:500, ]
 eff2 = eff.data[501:1000, ]
-eff3 = eff.data[1001:1500, ]
+eff4 = eff.data[1001:1500, ]
+eff5 = eff.data[1501:2000, ]
+eff.data = as.matrix(read.csv("Simulation/eff_hetero.csv")[, -1])
+eff3 = eff.data[1:500, ]
+eff6 = eff.data[501:1000, ]
+
 
 #sd1 = colSds(eff1)
 mean1 = colMeans(eff1)
@@ -195,27 +179,29 @@ mean1 = colMeans(eff1)
 mean2 = colMeans(eff2)
 #low = mean2 - sd2
 #upp = mean2 + sd2
-dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2))
-#sd3 = colSds(eff3)
-#mean3 = colMeans(eff3)
-#low = mean3 - sd3
-#upp = mean3 + sd3
-#dat = rbind(dat, cbind(tauSeq, mean3, low, upp))
+mean4 = colMeans(eff4)
+mean5 = colMeans(eff5)
+mean3 = colMeans(eff3)
+mean6 = colMeans(eff6)
+dat = rbind(cbind(tauSeq, mean1), cbind(tauSeq, mean2), cbind(tauSeq, mean3), cbind(tauSeq, mean4), cbind(tauSeq, mean5), cbind(tauSeq, mean6))
 dat = rbind(dat, cbind(tauSeq, beta0))
 dat = as.data.frame(dat)
 colnames(dat) = c("quantile", "eff")
-dat$type = c(rep("\\texttt{Our method}", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau), rep("\\texttt{True effects}", nTau))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}","\\texttt{True effects}"))
+dat$type = c(rep("\\texttt{Bandwidth} $h_1$", nTau), rep("\\texttt{Bandwidth} $h_2$", nTau), rep("\\texttt{Bandwidth} $h_3$", nTau), 
+             rep("\\texttt{Bandwidth} $h_4$", nTau), rep("\\texttt{Bandwidth} $h_5$", nTau), rep("\\texttt{Peng} \\& \\texttt{Huang}", nTau), 
+             rep("\\texttt{True effects}", nTau))
+dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Bandwidth} $h_1$", "\\texttt{Bandwidth} $h_2$",
+                                       "\\texttt{Bandwidth} $h_3$", "\\texttt{Bandwidth} $h_4$", "\\texttt{Bandwidth} $h_5$", "\\texttt{True effects}"))
 
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = quantile, y = eff, color = type)) +
-  geom_line(aes(y = eff, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid", "dashed")) +
+  geom_line(aes(y = eff, color = type, linetype = type), size = 1) + 
+  scale_linetype_manual(values = c("solid", rep("twodash", 5), "dashed")) +
   #geom_ribbon(aes(y = eff, ymin = low, ymax = upp, fill = type), alpha = 0.3) + 
   theme_bw() + xlab("Quantile level $\\tau$") + 
   ylab("Estimated quantile effects") + 
   theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  #theme(legend.position = c(0.65, 0.2), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #theme(legend.position = c(0.78, 0.32), legend.title = element_blank(), legend.text = element_text(size = 15), legend.key.size = unit(0.9, "cm"),
   #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
   #      axis.title = element_text(size = 20))
 dev.off()
@@ -223,25 +209,6 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 
-
-est = rbind(colMeans(eff1), colMeans(eff2), colMeans(eff3))
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-plot(tauSeq, est[2, ], type = "b", pch = 1, lwd = 5, cex = 1, col = "red", axes = FALSE, xlim = c(0, 0.85), ylim = c(-2.6, 1.5), xlab = "", ylab = "")
-lines(tauSeq, est[1, ], type = "b", pch = 2, lwd = 5, cex = 1, col = "blue")
-lines(tauSeq, est[3, ], type = "b", pch = 4, lwd = 5, cex = 1, col = "forestgreen")
-lines(tauSeq, beta0, type = "l", lwd = 5, cex = 1)
-axis(1, tauSeq[c(1, 6, 11, 16)], line = 0, cex.axis = 1.5)
-axis(2, c(-2, -1, 0, 1), line = 0, cex.axis = 1.5)
-box()
-abline(h = c(-2, -1, 0, 1), v = tauSeq[c(1, 6, 11, 16)], col = "gray", lty = 2)
-#color = c("red", "blue", "black")
-#labels = c("CQR", "smoothed CQR", "quantile effects")
-#pch = c(1, 2, NA)
-#legend("topleft", labels, col = color, pch = pch, lwd = 3, cex = 1.5, box.lwd = 1, bg = "white")
-title(xlab = "Quantile level $\\tau$", line = 2.5, cex.lab = 1.8)
-title(ylab = "Estimated quantile effects", line = 2.5, cex.lab = 1.8)
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Running time lots
