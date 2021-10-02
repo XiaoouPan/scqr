@@ -211,8 +211,24 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 
-### Running time lots
-time = as.matrix(read.csv("Simulation/time_hetero.csv")[1:2, -1])
+### Running time plots
+setwd("~/Dropbox/Conquer/SCQR/Code")
+time = rbind(as.matrix(read.csv("Simulation/sensitivity/time_hetero.csv")[, -1]), as.matrix(read.csv("Simulation/time_hetero.csv")[1:2, -1]))
+### For sensitivity analysis
+meth = c(rep("$h_1$", M), rep("$h_2$", M), rep("$h_3$", M), rep("$h_4$", M), rep("$h_5$", M), rep("\\texttt{P} \\& \\texttt{H}", M))
+method = factor(meth, levels = c("$h_1$", "$h_2$", "$h_3$", "$h_4$", "$h_5$", "\\texttt{P} \\& \\texttt{H}"))
+rst = data.frame("time" = c(time[1, ], time[2, ], time[5, ], time[3, ], time[4, ], time[6, ]), "method" = method)
+tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
+ggplot(rst, aes(x = method, y = time, fill = method)) + 
+  geom_boxplot(alpha = 1, width = 0.7, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
+  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Elapsed time (in seconds)") + theme_bw() + 
+  #scale_y_continuous(breaks = seq(0, 125, 25)) + 
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
+dev.off()
+tools::texi2dvi("plot.tex", pdf = T)
+
+
+### For main text
 meth = c(rep("Our method", 500), rep("Peng \\& Huang", 500))
 meth = factor(meth, levels = c("Our method", "Peng \\& Huang"))
 rst = data.frame("time" = c(time[1, ], time[2, ]), "method" = meth)
