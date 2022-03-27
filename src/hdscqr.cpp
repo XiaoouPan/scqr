@@ -769,7 +769,6 @@ Rcpp::List cvSqrLassoGrow(const arma::mat& X, const arma::vec& censor, arma::vec
   double my = arma::mean(Y);
   Y -= my;
   arma::vec HSeq = getH(tauSeq);
-  mse = arma::zeros(nlambda);
   arma::vec dilate = 1 + arma::log((1 - tauSeq(0)) / (1 - tauSeq));
   for (int j = 1; j <= kfolds; j++) {
     arma::uvec idx = arma::find(folds == j);
@@ -819,14 +818,13 @@ Rcpp::List cvSqrLassoIncr(const arma::mat& X, const arma::vec& censor, arma::vec
   const double h1 = 1.0 / h, h2 = 1.0 / (h * h);
   arma::vec betaHat(p + 1);
   arma::mat betaProc(p + 1, m);
-  arma::vec mse = arma::zeros(nlambda, nincr);
+  arma::mat mse = arma::zeros(nlambda, nincr);
   arma::rowvec mx = arma::mean(X, 0);
   arma::vec sx1 = 1.0 / arma::stddev(X, 0, 0).t();
   arma::mat Z = arma::join_rows(arma::ones(n), standardize(X, mx, sx1, p));
   double my = arma::mean(Y);
   Y -= my;
   arma::vec HSeq = getH(tauSeq);
-  mse = arma::zeros(nlambda);
   for (int j = 1; j <= kfolds; j++) {
     arma::uvec idx = arma::find(folds == j);
     arma::uvec idxComp = arma::find(folds != j);
@@ -853,7 +851,7 @@ Rcpp::List cvSqrLassoIncr(const arma::mat& X, const arma::vec& censor, arma::vec
       }
     }
   }
-  arma::uword cvIdx = arma::index_min(mse);
+  arma::uword cvIdx = mse.index_min();
   arma::vec accu = tauSeq(0) * arma::ones(n);
   double lambda = lambdaSeq((int)cvIdx % nlambda);
   double incr = incrSeq((int)cvIdx / nlambda);
@@ -870,12 +868,6 @@ Rcpp::List cvSqrLassoIncr(const arma::mat& X, const arma::vec& censor, arma::vec
   return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("lambda0") = lambda, Rcpp::Named("incr0") = incr);
 }
 
-// [[Rcpp::export]]
-int exam(arma::mat A) {
-  arma::uword cvIdx = A.index_min();
-  return (int)cvIdx % 3;
-}
-  
 // [[Rcpp::export]]
 arma::mat SqrScad(const arma::mat& X, const arma::vec& censor, arma::vec Y, const double lambda, const arma::vec& tauSeq, const double h, 
                   const double phi0 = 0.1, const double gamma = 1.2, const double epsilon = 0.01, const int iteMax = 500) {
