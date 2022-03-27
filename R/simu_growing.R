@@ -11,16 +11,6 @@ library(survival)
 library(tikzDevice)
 library(ggplot2)
 
-getSigma = function(p) {
-  sig = diag(p)
-  for (i in 1:(p - 1)) {
-    for (j in (i + 1):p) {
-      sig[i, j] = sig[j, i] = 0.5^(j - i)
-    }
-  }
-  return (sig)
-}
-
 accuError = function(betahat, beta, tauSeq) {
   nTau = min(length(tauSeq), ncol(betahat) + 1)
   diff = betahat - beta
@@ -41,29 +31,34 @@ tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
-M = 500
-coef1 = coef2 = coef3 = time1 = time2 = time3 = prop = matrix(0, M, l)
-accu1 = accu2 = accu3 = matrix(0, M, l)
+M = 100
+coef1 = coef2 = coef3 = coef4 = time1 = time2 = prop = matrix(NA, M, l)
+#accu1 = accu2 = accu3 = matrix(0, M, l)
+
+## Quantil index of interest
+index1 = 6  #tau = 0.3
+index2 = 10 #tau = 0.5
+index3 = 14 #tau = 0.7
 
 pb = txtProgressBar(style = 3)
 for (j in 1:l) {
   n = nseq[j]
   p = pseq[j]
   h = 0.5 * ((p + log(n)) / n)^(0.4)
+  Sigma = toeplitz(0.5^(0:(p - 1)))
   for (i in 1:M) {
     set.seed((j - 1) * M + i)
-    Sigma = getSigma(p)
     X = mvrnorm(n, rep(0, p), Sigma)
     err = rt(n, 2)
     ## Homo 
-    beta = runif(p, -2, 2)
-    betaMat = rbind(beta0, matrix(beta, p, nTau))
-    logT = X %*% beta + err
+    #beta = runif(p, -2, 2)
+    #betaMat = rbind(beta0, matrix(beta, p, nTau))
+    #logT = X %*% beta + err
     ## Hetero
-    #X[, 1] = abs(X[, 1])
-    #beta = runif(p - 1, -2, 2)
-    #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-    #logT = X[, 1] * err + X[, -1] %*% beta
+    X[, 1] = abs(X[, 1])
+    beta = runif(p - 1, -2, 2)
+    betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
+    logT = X[, 1] * err + X[, -1] %*% beta
     w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
     logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
     censor = logT <= logC
@@ -75,28 +70,34 @@ for (j in 1:l) {
     start = Sys.time()
     list = scqrGauss(X, Y, censor, tauSeq)
     end = Sys.time()
-    time1[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    accu1[i, j] = accuError(list$coeff, betaMat, tauSeq)
-    coef1[i, j] = norm(list$coeff[, 14] - betaMat[, 14], "2")
+    #time1[i, j] = as.numeric(difftime(end, start, units = "secs"))
+    #accu1[i, j] = accuError(list$coeff, betaMat, tauSeq)
+    coef1[i, j] = norm(list$coeff[, index1] - betaMat[, index1], "2")
+    coef3[i, j] = norm(list$coeff[, index2] - betaMat[, index2], "2")
     
     ## Peng and Huang
     start = Sys.time()
     list = crq(response ~ X, method = "PengHuang", grid = grid)
     end = Sys.time()
-    time2[i, j] = as.numeric(difftime(end, start, units = "secs"))
+    #time2[i, j] = as.numeric(difftime(end, start, units = "secs"))
     tt = ncol(list$sol)
-    if (tt >= nTau - 1) {
-      accu2[i, j] = accuError(list$sol[2:(p + 2), ], betaMat[, 1:tt], tauSeq)
+    #if (tt >= nTau - 1) {
+    #  accu2[i, j] = accuError(list$sol[2:(p + 2), ], betaMat[, 1:tt], tauSeq)
+    #}
+    if (tt >= index1) {
+      coef2[i, j] = norm(list$sol[2:(p + 2), index1] - betaMat[, index1], "2")
     }
-    coef2[i, j] = norm(list$sol[2:(p + 2), 14] - betaMat[, 14], "2")
+    if (tt >= index2) {
+      coef4[i, j] = norm(list$sol[2:(p + 2), index2] - betaMat[, index2], "2")
+    }
     
     ## Portnoy
-    start = Sys.time()
-    list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
-    end = Sys.time()
-    time3[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    accu3[i, j] = accuError(list$sol[2:(p + 2), 2:17], betaMat, tauSeq)
-    coef3[i, j] = norm(list$sol[2:(p + 2), 15] - betaMat[, 14], "2")
+    #start = Sys.time()
+    #list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
+    #end = Sys.time()
+    #time3[i, j] = as.numeric(difftime(end, start, units = "secs"))
+    #accu3[i, j] = accuError(list$sol[2:(p + 2), 2:17], betaMat, tauSeq)
+    #coef3[i, j] = norm(list$sol[2:(p + 2), 15] - betaMat[, 14], "2")
     
     setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
   }
@@ -107,8 +108,10 @@ for (j in 1:l) {
 #write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/prop.csv")
 #write.csv(time1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time1.csv")
 #write.csv(time2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/time2.csv")
-#write.csv(coef1, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef1.csv")
-#write.csv(coef2, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/coef2.csv")
+write.csv(coef1, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Growing/coef1_hetero.csv")
+write.csv(coef2, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Growing/coef2_hetero.csv")
+write.csv(coef3, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Growing/coef3_hetero.csv")
+write.csv(coef4, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Growing/coef4_hetero.csv")
 #time = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/time.csv"))[, -1]
 #coef = as.matrix(read.csv("~/Dropbox/Conquer/censoredQR/Code/Simulation/coef.csv"))[, -1]
 
@@ -159,22 +162,22 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### Estimation error at a certain quantile
-mean1 = colMeans(coef1, na.rm = TRUE)
-mean2 = colMeans(coef2, na.rm = TRUE)
+mean1 = colMeans(coef3, na.rm = TRUE)
+mean2 = colMeans(coef4, na.rm = TRUE)
 dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
 dat = as.data.frame(dat)
 colnames(dat) = c("size", "coef")
 dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
 dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
 
+setwd("~/Dropbox/Conquer/SCQR/Code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = size, y = coef)) +
   geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
   scale_linetype_manual(values = c("twodash", "solid")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Sample size") + ylab("Estimation error at $\\tau = 0.7$") +
+  theme_bw() + xlab("Sample size") + ylab("Estimation error at $\\tau = 0.5$") +
   theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  #theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #theme(legend.position = c(0.32, 0.88), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
   #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
   #      axis.title = element_text(size = 20))
 dev.off()
