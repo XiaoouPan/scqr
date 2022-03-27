@@ -867,7 +867,7 @@ Rcpp::List cvSqrLassoIncr(const arma::mat& X, const arma::vec& censor, arma::vec
   }
   betaProc.rows(1, p).each_col() %= sx1;
   betaProc.row(0) += my - mx * betaProc.rows(1, p);
-  return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("lambda0") = lambda, cpp::Named("incr0") = incr);
+  return Rcpp::List::create(Rcpp::Named("beta") = betaProc, Rcpp::Named("lambda0") = lambda, Rcpp::Named("incr0") = incr);
 }
 
 // [[Rcpp::export]]
