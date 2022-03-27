@@ -11,27 +11,6 @@ library(survival)
 library(tikzDevice)
 library(ggplot2)
 
-getSigma = function(p) {
-  sig = diag(p)
-  for (i in 1:(p - 1)) {
-    for (j in (i + 1):p) {
-      sig[i, j] = sig[j, i] = 0.5^(j - i)
-    }
-  }
-  return (sig)
-}
-
-estError = function(betahat, beta, tauSeq) {
-  nTau = min(length(tauSeq), ncol(betahat) + 1)
-  diff = betahat - beta
-  err = sqrt(colSums((betahat - beta)^2))
-  accu = 0
-  for (k in 2:nTau) {
-    accu = accu + err[k - 1] * (tauSeq[k] - tauSeq[k - 1])
-  }
-  return (accu)
-}
-
 
 n = 400
 p = 5
@@ -50,7 +29,7 @@ prop = rep(0, M)
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
   set.seed(i)
-  Sigma = getSigma(p)
+  Sigma = toeplitz(0.5^(0:(p - 1)))
   X = mvrnorm(n, rep(0, p), Sigma)
   err = rt(n, df)
   ## Homo
