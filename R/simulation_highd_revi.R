@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### Cross validation for the increment in lambda sequence, suggested by a referee. This is for the comparison with Zheng, Peng and He (2018)
 library(quantreg)
 library(MASS)
 library(MultiRNG)
@@ -41,9 +41,9 @@ getSet = function(beta.hat, m) {
 
 
 #### Quantile process with fixed scale, hard to visualize
-n = 400
-p = 1000
-s = 10
+n = 200
+p = 500
+s = 5
 M = 100
 kfolds = 3
 h = 0.5 * (log(p) / n)^(1/4)
@@ -56,9 +56,8 @@ lambdaSeq = exp(seq(log(0.01), log(0.2), length.out = 50))
 incrSeq = seq(0.001, 0.02, length.out = 20)
 trueSig = c(rep(1, s), rep(0, p - s))
 
-time = prop = rep(0, M)
-TPR1 = TNR1 = FDR1 = error1 = rep(NA, M)
-TPR2 = TNR2 = FDR2 = error2 = rep(NA, M)
+TPR1 = TNR1 = FDR1 = error1 = time1 = rep(NA, M)
+TPR2 = TNR2 = FDR2 = error2 = time2 = rep(NA, M)
 
 pb = txtProgressBar(style = 3)
 for (i in 1:M) {
@@ -78,7 +77,6 @@ for (i in 1:M) {
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
   censor = logT <= logC
-  prop[i] = 1 - sum(censor) / n
   Y = pmin(logT, logC)
   folds = createFolds(censor, kfolds, FALSE)
   
@@ -87,7 +85,7 @@ for (i in 1:M) {
   fit = cvSqrLassoGrow(X, censor, Y, lambdaSeq, folds, tauSeq, kfolds, h)
   end = Sys.time()
   beta.lasso = fit$beta
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
+  time1[i] = as.numeric(difftime(end, start, units = "secs"))
   activeSet = getSet(beta.lasso, m)
   uniSet = activeSet$union
   Xunion = X[, uniSet, drop = FALSE]
@@ -102,27 +100,32 @@ for (i in 1:M) {
   }
   
   ## SCQR-Lasso with cv for increment
-  start = Sys.time()
-  fit = cvSqrLassoIncr(X, censor, Y, lambdaSeq, incrSeq, folds, tauSeq, kfolds, h)
-  end = Sys.time()
-  beta.lasso2 = fit$beta
-  time[i] = as.numeric(difftime(end, start, units = "secs"))
-  activeSet = getSet(beta.lasso2, m)
-  uniSet = activeSet$union
-  Xunion = X[, uniSet, drop = FALSE]
+  #start = Sys.time()
+  #fit = cvSqrLassoIncr(X, censor, Y, lambdaSeq, incrSeq, folds, tauSeq, kfolds, h)
+  #end = Sys.time()
+  #beta.lasso2 = fit$beta
+  #time2[i] = as.numeric(difftime(end, start, units = "secs"))
+  #activeSet = getSet(beta.lasso2, m)
+  #uniSet = activeSet$union
+  #Xunion = X[, uniSet, drop = FALSE]
   ## scqr on the union set
-  if (length(uniSet) > 0) {
-    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
-    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
-    TPR2[i] = test$TPR
-    TNR2[i] = test$TNR
-    FDR2[i] = test$FDR
-    error2[i] = test$error
-  }
+  #if (length(uniSet) > 0) {
+  #  beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+  #  test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+  #  TPR2[i] = test$TPR
+  #  TNR2[i] = test$TNR
+  #  FDR2[i] = test$FDR
+  #  error2[i] = test$error
+  #}
 
   setTxtProgressBar(pb, i / M)
 }
 
+
+result1 = rbind(TPR1, TNR1, FDR1, error1, time)
+result2 = rbind(TPR2, TNR2, FDR2, error2, time)
+write.csv(result1, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result1_homo.csv")
+write.csv(result2, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result2_homo.csv")
 
 
 
@@ -137,27 +140,14 @@ mtc.mcp = as.matrix(read.csv("mtc_mcp.csv")[, -1])
 
 
 ### Data for plots
-meth = c(rep("Lasso", M), rep("SCAD", M), rep("MCP", M))
-meth = factor(meth, levels = c("Lasso", "SCAD", "MCP"))
-time = c(tp.lasso[1, ], tp.scad[1, ], tp.mcp[1, ])
-prop = c(tp.lasso[2, ], tp.scad[2, ], tp.mcp[2, ])
-TPR = c(mtc.lasso[1, ], mtc.scad[1, ], mtc.mcp[1, ])
-TNR = c(mtc.lasso[2, ], mtc.scad[2, ], mtc.mcp[2, ])
-FDR = c(mtc.lasso[3, ], mtc.scad[3, ], mtc.mcp[3, ])
-error = c(mtc.lasso[4, ], mtc.scad[4, ], mtc.mcp[4, ])
-dat = data.frame("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = error, "time" = time, "prop" = prop, "method" = meth)
-
-
-
-### Proportion
-setwd("~/Dropbox/Conquer/SCQR/Code")
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = prop, y = prop, fill = method)) + 
-  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Estimation") + 
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
+meth = c(rep("Dilating $\\lambda$", M), rep("CV for $\\lambda$ increment", M))
+meth = factor(meth, levels = c("Dilating $\\lambda$", "CV for $\\lambda$ increment"))
+time = c(time1, time2)
+TPR = c(TPR1, TPR2)
+TNR = c(TNR1, TNR2)
+FDR = c(FDR1, FDR2)
+error = c(error1, error2)
+dat = data.frame("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "error" = error, "time" = time, "method" = meth)
 
 
 ### TPR
