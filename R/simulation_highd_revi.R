@@ -65,14 +65,14 @@ for (i in 1:M) {
   X = mvrnorm(n, rep(0, p), Sigma)
   err = rt(n, 2)
   ## Homo
-  beta = c(runif(s, 1, 1.5), rep(0, p - s))
-  betaMat = rbind(beta0, matrix(beta, p, nTau))
-  logT = X %*% beta + err
+  #beta = c(runif(s, 1, 1.5), rep(0, p - s))
+  #betaMat = rbind(beta0, matrix(beta, p, nTau))
+  #logT = X %*% beta + err
   ## Hetero
-  #X[, 1] = abs(X[, 1])
-  #beta = c(runif(s - 1, 1, 1.5), rep(0, p - s))
-  #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-  #logT = X[, 1] * err + X[, -1] %*% beta
+  X[, 1] = abs(X[, 1])
+  beta = c(runif(s - 1, 1, 1.5), rep(0, p - s))
+  betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
+  logT = X[, 1] * err + X[, -1] %*% beta
   
   w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
   logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
@@ -100,23 +100,23 @@ for (i in 1:M) {
   }
   
   ## SCQR-Lasso with cv for increment
-  #start = Sys.time()
-  #fit = cvSqrLassoIncr(X, censor, Y, lambdaSeq, incrSeq, folds, tauSeq, kfolds, h)
-  #end = Sys.time()
-  #beta.lasso2 = fit$beta
-  #time2[i] = as.numeric(difftime(end, start, units = "secs"))
-  #activeSet = getSet(beta.lasso2, m)
-  #uniSet = activeSet$union
-  #Xunion = X[, uniSet, drop = FALSE]
+  start = Sys.time()
+  fit = cvSqrLassoIncr(X, censor, Y, lambdaSeq, incrSeq, folds, tauSeq, kfolds, h)
+  end = Sys.time()
+  beta.lasso2 = fit$beta
+  time2[i] = as.numeric(difftime(end, start, units = "secs"))
+  activeSet = getSet(beta.lasso2, m)
+  uniSet = activeSet$union
+  Xunion = X[, uniSet, drop = FALSE]
   ## scqr on the union set
-  #if (length(uniSet) > 0) {
-  #  beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
-  #  test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
-  #  TPR2[i] = test$TPR
-  #  TNR2[i] = test$TNR
-  #  FDR2[i] = test$FDR
-  #  error2[i] = test$error
-  #}
+  if (length(uniSet) > 0) {
+    beta.union = scqrGauss(Xunion, Y, censor, tauSeq)
+    test = exam(trueSig, uniSet, beta.union, betaMat[-1, ])
+    TPR2[i] = test$TPR
+    TNR2[i] = test$TNR
+    FDR2[i] = test$FDR
+    error2[i] = test$error
+  }
 
   setTxtProgressBar(pb, i / M)
 }
@@ -124,8 +124,8 @@ for (i in 1:M) {
 
 result1 = rbind(TPR1, TNR1, FDR1, error1, time)
 result2 = rbind(TPR2, TNR2, FDR2, error2, time)
-write.csv(result1, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result1_homo.csv")
-write.csv(result2, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result2_homo.csv")
+write.csv(result1, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result1_hetero.csv")
+write.csv(result2, "~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/Highd/result2_hetero.csv")
 
 
 
