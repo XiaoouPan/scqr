@@ -12,15 +12,15 @@ library(tikzDevice)
 library(ggplot2)
 
 #### Growing dimension and sample size
-nseq = seq(1000, 20000, by = 1000)
-pseq = floor(nseq / 100)
-l = length(nseq)
+n = 5000
+pseq = seq(20, 100, by = 20)
+l = length(pseq)
 tauSeq = seq(0.05, 0.8, by = 0.05)
 grid = seq(0.05, 0.85, by = 0.05)
 nTau = length(tauSeq)
 beta0 = qt(tauSeq, 2)
 M = 100
-coef1 = coef2 = coef3 = coef4 = time1 = time2 = prop = matrix(NA, M, l)
+coef1 = coef2 = coef3 =  matrix(NA, M, l)
 
 ## Quantil index of interest
 index1 = 6  #tau = 0.3
@@ -29,7 +29,6 @@ index3 = 14 #tau = 0.7
 
 pb = txtProgressBar(style = 3)
 for (j in 1:l) {
-  n = nseq[j]
   p = pseq[j]
   #h = 0.5 * ((p + log(n)) / n)^(0.4)
   h2 = max(0.5 * (log(p) / n)^(1/4), 0.05) ## bandwidth for high-d
@@ -39,14 +38,14 @@ for (j in 1:l) {
     X = mvrnorm(n, rep(0, p), Sigma)
     err = rt(n, 2)
     ## Homo 
-    #beta = runif(p, -2, 2)
-    #betaMat = rbind(beta0, matrix(beta, p, nTau))
-    #logT = X %*% beta + err
+    beta = runif(p, -2, 2)
+    betaMat = rbind(beta0, matrix(beta, p, nTau))
+    logT = X %*% beta + err
     ## Hetero
-    X[, 1] = abs(X[, 1])
-    beta = runif(p - 1, -2, 2)
-    betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-    logT = X[, 1] * err + X[, -1] %*% beta
+    #X[, 1] = abs(X[, 1])
+    #beta = runif(p - 1, -2, 2)
+    #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
+    #logT = X[, 1] * err + X[, -1] %*% beta
     w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
     logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
     censor = logT <= logC
@@ -55,43 +54,23 @@ for (j in 1:l) {
     response = Surv(Y, censor, type = "right")
     
     ## Smoothed CQR
-    start = Sys.time()
-    list = scqrGauss(X, Y, censor, tauSeq, h = h2)
-    end = Sys.time()
-    #time1[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    #accu1[i, j] = accuError(list$coeff, betaMat, tauSeq)
-    coef1[i, j] = norm(list$coeff[, index1] - betaMat[, index1], "2")
-    coef2[i, j] = norm(list$coeff[, index2] - betaMat[, index2], "2")
-    coef3[i, j] = norm(list$coeff[, index3] - betaMat[, index3], "2")
-    
+    list = scqrGauss(X, Y, censor, tauSeq)
+    coef1[i, j] = norm(list$coeff[, index2] - betaMat[, index2], "2")
+
     ## Peng and Huang
-    #start = Sys.time()
-    #list = crq(response ~ X, method = "PengHuang", grid = grid)
-    #end = Sys.time()
-    #time2[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    #tt = ncol(list$sol)
-    #if (tt >= nTau - 1) {
-    #  accu2[i, j] = accuError(list$sol[2:(p + 2), ], betaMat[, 1:tt], tauSeq)
-    #}
-    #if (tt >= index1) {
-    #  coef2[i, j] = norm(list$sol[2:(p + 2), index1] - betaMat[, index1], "2")
-    #}
-    #if (tt >= index2) {
-    #  coef4[i, j] = norm(list$sol[2:(p + 2), index2] - betaMat[, index2], "2")
-    #}
-    
-    ## Portnoy
-    #start = Sys.time()
-    #list = crq(response ~ X, method = "Portnoy", grid = tauSeq)
-    #end = Sys.time()
-    #time3[i, j] = as.numeric(difftime(end, start, units = "secs"))
-    #accu3[i, j] = accuError(list$sol[2:(p + 2), 2:17], betaMat, tauSeq)
-    #coef3[i, j] = norm(list$sol[2:(p + 2), 15] - betaMat[, 14], "2")
+    list = crq(response ~ X, method = "PengHuang", grid = grid)
+    tt = ncol(list$sol)
+    if (tt >= index2) {
+      coef2[i, j] = norm(list$sol[2:(p + 2), index2] - betaMat[, index2], "2")
+    }
+
+    ## Smoothed CQR with misspecified h
+    list = scqrGauss(X, Y, censor, tauSeq, h = h2)
+    coef3[i, j] = norm(list$coeff[, index2] - betaMat[, index2], "2")
     
     setTxtProgressBar(pb, ((j - 1) * M + i) / (l * M))
   }
 }
-
 
 
 #write.csv(prop, "~/Dropbox/Conquer/censoredQR/Code/Simulation/Growing/prop.csv")
