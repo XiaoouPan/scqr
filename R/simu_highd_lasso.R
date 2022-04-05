@@ -148,17 +148,17 @@ for (i in 1:M) {
 }
 
 
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero/lasso")
+setwd("~/Dropbox/Conquer/SCQR/code/Simulation/highd/hetero/lasso")
 tp.cqr = as.matrix(read.csv("tp_cqr.csv")[, -1])
 mtc.cqr = as.matrix(read.csv("mtc_cqr.csv")[, -1])
-setwd("~/Dropbox/Conquer/SCQR/Code/Simulation/highd/hetero")
+setwd("~/Dropbox/Conquer/SCQR/code/Simulation/highd/hetero")
 mtc.lasso = as.matrix(read.csv("mtc_lasso.csv")[, -1])
 
 
 M = 500
 ### Data for plots
-meth = c(rep("Smoothed CQR", M), rep("CQR", M))
-meth = factor(meth, levels = c("Smoothed CQR", "CQR"))
+meth = c(rep("CV-SCQR-Lasso", M), rep("CQR-Lasso", M))
+meth = factor(meth, levels = c("CV-SCQR-Lasso", "CQR-Lasso"))
 time = c(tp.cqr[1, ], tp.cqr[2, ])
 prop = c(tp.cqr[3, ], tp.cqr[3, ])
 TPR = c(mtc.lasso[1, ], mtc.cqr[1, ])
@@ -168,19 +168,8 @@ dat = data.frame("TPR" = TPR, "TNR" = TNR, "FDR" = FDR, "time" = time, "prop" = 
 
 
 
-### Proportion
-setwd("~/Dropbox/Conquer/SCQR/Code")
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = prop, y = prop, fill = method)) + 
-  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("Estimation") + 
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
 ### TPR
-setwd("~/Dropbox/Conquer/SCQR/Code")
+setwd("~/Dropbox/Conquer/SCQR/code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = method, y = TPR, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
@@ -190,19 +179,9 @@ dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
 
 
-### TNR
-setwd("~/Dropbox/Conquer/SCQR/Code")
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = method, y = TNR, fill = method)) + 
-  geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
-  scale_fill_brewer(palette = "Dark2") + xlab("") + ylab("True negative rate") + 
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 20), legend.position = "none")
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
 
 ### FDR
-setwd("~/Dropbox/Conquer/SCQR/Code")
+setwd("~/Dropbox/Conquer/SCQR/code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = method, y = FDR, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
@@ -213,7 +192,7 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### error
-setwd("~/Dropbox/Conquer/SCQR/Code")
+setwd("~/Dropbox/Conquer/SCQR/code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = method, y = error, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
@@ -224,7 +203,7 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 ### time
-setwd("~/Dropbox/Conquer/SCQR/Code")
+setwd("~/Dropbox/Conquer/SCQR/code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
 ggplot(dat, aes(x = method, y = time, fill = method)) + 
   geom_boxplot(alpha = 1, width = 0.8, outlier.colour = "red", outlier.fill = "red", outlier.size = 2, outlier.alpha = 1) + 
