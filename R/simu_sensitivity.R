@@ -38,18 +38,17 @@ for (j in 1:l) {
     X = mvrnorm(n, rep(0, p), Sigma)
     err = rt(n, 2)
     ## Homo 
-    beta = runif(p, -2, 2)
-    betaMat = rbind(beta0, matrix(beta, p, nTau))
-    logT = X %*% beta + err
+    #beta = runif(p, -2, 2)
+    #betaMat = rbind(beta0, matrix(beta, p, nTau))
+    #logT = X %*% beta + err
     ## Hetero
-    #X[, 1] = abs(X[, 1])
-    #beta = runif(p - 1, -2, 2)
-    #betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
-    #logT = X[, 1] * err + X[, -1] %*% beta
+    X[, 1] = abs(X[, 1])
+    beta = runif(p - 1, -2, 2)
+    betaMat = rbind(rep(0, nTau), beta0, matrix(beta, p - 1, nTau))
+    logT = X[, 1] * err + X[, -1] %*% beta
     w = sample(1:3, n, prob = c(1/3, 1/3, 1/3), replace = TRUE)
     logC = (w == 1) * rnorm(n, 0, 4) + (w == 2) * rnorm(n, 5, 1) + (w == 3) * rnorm(n, 10, 0.5)
     censor = logT <= logC
-    prop[i, j] = 1 - sum(censor) / n
     Y = pmin(logT, logC)
     response = Surv(Y, censor, type = "right")
     
@@ -106,28 +105,6 @@ time2 = time[501:1000, ]
 diff = as.matrix(read.csv("Simulation/growing/diff_homo.csv")[, -1])
 
 
-### Global estimation error 
-mean1 = colMeans(accu1, na.rm = TRUE)
-mean2 = colMeans(accu2, na.rm = TRUE)
-dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
-dat = as.data.frame(dat)
-colnames(dat) = c("size", "coef")
-dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
-
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = size, y = coef)) +
-  geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Sample size") + ylab("Global estimation error") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
 
 ### Estimation error at a certain quantile
 mean1 = colMeans(coef3, na.rm = TRUE)
@@ -153,47 +130,6 @@ tools::texi2dvi("plot.tex", pdf = T)
 
 
 
-## Time plot
-mean1 = colMeans(time1, na.rm = TRUE)
-mean2 = colMeans(time2, na.rm = TRUE)
-dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2))
-dat = as.data.frame(dat)
-colnames(dat) = c("size", "time")
-dat$type = c(rep("\\texttt{Our method}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Our method}"))
-
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = size, y = time)) +
-  geom_line(aes(y = time, color = type, linetype = type), size = 3) + 
-  scale_linetype_manual(values = c("twodash", "solid")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Sample size") + ylab("Elapsed time (in seconds)") +
-  #theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  theme(legend.position = c(0.35, 0.8), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
-        legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-        axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
-
-
-###### Sensitivity analysis (for JASA rebuttal) with growing scale
-
-setwd("~/Dropbox/Conquer/SCQR/Code")
-coef = as.matrix(read.csv("Simulation/sensitivity/coef_grow_homo.csv")[, -1])
-coef1 = coef[1:500, ]
-coef2 = coef[501:1000, ]
-coef3 = coef[1001:1500, ]
-coef4 = coef[1501:2000, ]
-coef5 = coef[2001:2500, ]
-time = as.matrix(read.csv("Simulation/sensitivity/time_grow_hetero.csv")[, -1])
-time1 = time[1:500, ]
-time2 = time[501:1000, ]
-time3 = time[1001:1500, ]
-time4 = time[1501:2000, ]
-time5 = time[2001:2500, ]
-
-
 ###### Sensitivity analysis (for AOS revision) with growing scale
 
 coef1 = as.matrix(read.csv("~/Dropbox/Conquer/SCQR/AOS_rev/Simulation/sensitivity/coef3_hetero.csv")[, -1])
@@ -214,62 +150,28 @@ time7 = time[501:1000, ]
 
 ### Estimation error at a certain quantile
 mean1 = colMeans(coef1, na.rm = TRUE)
-mean6 = colMeans(coef6, na.rm = TRUE)
-mean7 = colMeans(coef7, na.rm = TRUE)
-dat = rbind(cbind(nseq, mean1), cbind(nseq, mean6), cbind(nseq, mean7))
+mean2 = colMeans(coef2, na.rm = TRUE)
+mean3 = colMeans(coef3, na.rm = TRUE)
+dat = rbind(cbind(pseq, mean1), cbind(pseq, mean2), cbind(pseq, mean3))
 dat = as.data.frame(dat)
-colnames(dat) = c("size", "coef")
-dat$type = c(rep("\\texttt{Misspecified bandwidth}", l), rep("\\texttt{Optimal bandwidth}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
+colnames(dat) = c("dimension", "coef")
+dat$type = c(rep("\\texttt{Misspecified bandwidth}", l), rep("\\texttt{Peng} \\& \\texttt{Huang}", l), rep("\\texttt{Optimal bandwidth}", l))
 dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Misspecified bandwidth}", "\\texttt{Optimal bandwidth}"))
 #dat$color = c(rep("aquamarine", l), rep("bisque", l), rep("blueviolet", l), rep("cadetblue1", l), rep("coral", l), rep("brown1", l), rep("cyan", l))
 #dat$color = factor(dat$color, levels = c("cyan", "aquamarine", "bisque", "blueviolet", "cadetblue1", "coral", "brown1"))
 
 setwd("~/Dropbox/Conquer/SCQR/code")
 tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = size, y = coef)) +
+ggplot(dat, aes(x = dimension, y = coef)) +
   geom_line(aes(y = coef, color = type, linetype = type), size = 3) + 
   scale_linetype_manual(values = c("twodash", "dashed", "solid")) +
   #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Sample size") + ylab("Estimation error at $\\tau = 0.7$") +
+  theme_bw() + xlab("Dimension") + ylab("Estimation error at $\\tau = 0.5$") +
   theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  #theme(legend.position = c(0.7, 0.15), legend.title = element_blank(), legend.text = element_text(size = 20), legend.key.size = unit(1, "cm"),
+  #theme(legend.position = c(0.37, 0.87), legend.title = element_blank(), legend.text = element_text(size = 15), legend.key.size = unit(1, "cm"),
   #    legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
   #    axis.title = element_text(size = 20))
 dev.off()
 tools::texi2dvi("plot.tex", pdf = T)
-
-
-
-## Time plot
-mean1 = colMeans(time1, na.rm = TRUE)
-mean2 = colMeans(time2, na.rm = TRUE)
-mean3 = colMeans(time3, na.rm = TRUE)
-mean4 = colMeans(time4, na.rm = TRUE)
-mean5 = colMeans(time5, na.rm = TRUE)
-mean6 = colMeans(time6, na.rm = TRUE)
-mean7 = colMeans(time7, na.rm = TRUE)
-dat = rbind(cbind(nseq, mean1), cbind(nseq, mean2), cbind(nseq, mean3), cbind(nseq, mean4), cbind(nseq, mean5), cbind(nseq, mean6), cbind(nseq, mean7))
-dat = as.data.frame(dat)
-colnames(dat) = c("size", "time")
-dat$type = c(rep("\\texttt{Bandwidth}$=0.05$", l), rep("\\texttt{Bandwidth}$=0.1$", l), rep("\\texttt{Bandwidth}$=0.15$", l),
-             rep("\\texttt{Bandwidth}$=0.2$", l), rep("\\texttt{Bandwidth}$=0.25$", l), rep("\\texttt{Optimal bandwidth}", l), 
-             rep("\\texttt{Peng} \\& \\texttt{Huang}", l))
-dat$type = factor(dat$type, levels = c("\\texttt{Peng} \\& \\texttt{Huang}", "\\texttt{Bandwidth}$=0.05$", "\\texttt{Bandwidth}$=0.1$",
-                                       "\\texttt{Bandwidth}$=0.15$", "\\texttt{Bandwidth}$=0.2$", "\\texttt{Bandwidth}$=0.25$", 
-                                       "\\texttt{Optimal bandwidth}"))
-
-tikz("plot.tex", standAlone = TRUE, width = 5, height = 5)
-ggplot(dat, aes(x = size, y = time)) +
-  geom_line(aes(y = time, color = type, linetype = type), size = 1.5) + 
-  scale_linetype_manual(values = c("twodash", rep("solid", 5), "dashed")) +
-  #geom_ribbon(aes(y = coef, ymin = low, ymax = upp, fill = type), alpha = 0.3)
-  theme_bw() + xlab("Sample size") + ylab("Elapsed time (in seconds)") +
-  theme(legend.position = "none", axis.text = element_text(size = 15), axis.title = element_text(size = 20))
-  #theme(legend.position = c(0.3, 0.68), legend.title = element_blank(), legend.text = element_text(size = 15), legend.key.size = unit(1, "cm"),
-  #      legend.background = element_rect(fill = alpha("white", 0)), axis.text = element_text(size = 15), 
-  #      axis.title = element_text(size = 20))
-dev.off()
-tools::texi2dvi("plot.tex", pdf = T)
-
 
 
