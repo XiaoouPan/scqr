@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### Simulation with growing data scales
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")
