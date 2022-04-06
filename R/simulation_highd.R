@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### SCQR-Lasso, SCAD and MCP
 library(quantreg)
 library(MASS)
 library(MultiRNG)

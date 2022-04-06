@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### Simulation for inference (coordinate-wise confidence intervals).
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")

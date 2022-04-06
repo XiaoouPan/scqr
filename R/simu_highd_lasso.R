@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### CQR-Lasso and SCQR-Lasso, including comparison with Zheng, Peng and He (2018)
 library(quantreg)
 library(MASS)
 library(MultiRNG)

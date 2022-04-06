@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### Simulation analysis. To address a reviewer's quesiton. Not included in the paper.
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")

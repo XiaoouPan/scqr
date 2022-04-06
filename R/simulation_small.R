@@ -1,4 +1,4 @@
-###### Simulation code for scqr with small sample size
+###### Simulation on data with small sample size. This is suggested by a reviewer.
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")

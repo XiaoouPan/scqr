@@ -1,4 +1,4 @@
-###### Simulation code for scqr
+###### Simulation with a fixed data scale
 
 rm(list = ls())
 Rcpp::sourceCpp("src/scqr.cpp")
